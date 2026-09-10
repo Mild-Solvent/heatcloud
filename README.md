@@ -33,7 +33,7 @@ languages, 71 routes, no server, no database.
 | **`/{lang}/console/`** | **A mock of the customer console** — instances, storage, invoice, and a heat-contribution tab |
 | `/{lang}/heat/`, `/datacenters/`, `/about/`, `/support/`, `/contact/` | The rest |
 | `/{lang}/legal/` + 7 documents | Terms, AUP, SLA, Privacy, DPA, Cookies, Legal notice |
-| **`/{lang}/investors/`** | **The investor presentation** — a full-screen deck of 16 slides driven by keyboard, wheel, swipe and buttons, with its own root layout (no site header): the model, seven precedents abroad on a map, the regulatory tailwind, what a district town gets, the unit economics, the financing of the two halves, the plan, the risks, the ask, the sources. `#7` in the URL opens slide 7; F is full screen |
+| **`/{lang}/investors/`** | **The investor presentation** — a full-screen deck of 16 slides driven by keyboard, wheel, swipe and buttons, with its own root layout (no site header): the model, seven precedents abroad on a map, the regulatory tailwind, what a district town gets, the unit economics, the financing of the two halves, the plan, the risks, the ask, the sources. `#7` in the URL opens slide 7; F is full screen. Photographs are optional: drop `public/deck/cover.jpg`, `close.jpg` or `town.jpg` in place and the slides pick them up (the hero photo stands in until then) |
 | `404.html` | Bilingual, because a static server cannot know which language was wanted |
 
 Everything is clickable and the interactive parts run in the browser. What does

@@ -41,7 +41,7 @@ export default function Deck({ slides, ui, brand }: { slides: DeckSlide[]; ui: D
   const [fs, setFs] = useState(false);
   // The index also lives in a ref so the handlers never read a stale closure,
   // and the throttle is a timestamp rather than a flag, so it cannot stick.
-  const cur = useRef(0);
+  const idx = useRef(0);
   const movedAt = useRef(0);
   const root = useRef<HTMLDivElement>(null);
   const wheelAt = useRef(0);
@@ -49,20 +49,20 @@ export default function Deck({ slides, ui, brand }: { slides: DeckSlide[]; ui: D
 
   const go = useCallback((to: number) => {
     const t = Math.max(0, Math.min(n - 1, to));
-    const from = cur.current;
+    const from = idx.current;
     if (t === from) return;
     const now = Date.now();
     if (now - movedAt.current < 650) return;
     movedAt.current = now;
-    cur.current = t;
+    idx.current = t;
     setDir(t > from ? 1 : -1);
     setPrev(from);
     setI(t);
     window.setTimeout(() => setPrev((p) => (p === from ? null : p)), 720);
   }, [n]);
 
-  const next = useCallback(() => go(cur.current + 1), [go]);
-  const back = useCallback(() => go(cur.current - 1), [go]);
+  const next = useCallback(() => go(idx.current + 1), [go]);
+  const back = useCallback(() => go(idx.current - 1), [go]);
 
   // The hash is the slide number, one-based, so it reads like a page number.
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function Deck({ slides, ui, brand }: { slides: DeckSlide[]; ui: D
     if (m) {
       const k = Math.max(0, Math.min(n - 1, parseInt(m[1], 10) - 1));
       if (k !== 0) {
-        cur.current = k;
+        idx.current = k;
         setI(k);
       }
     }

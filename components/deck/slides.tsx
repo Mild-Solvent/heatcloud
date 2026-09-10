@@ -4,9 +4,9 @@ import { Logo } from '@/components/icons';
 import { RichText } from '@/components/RichText';
 import { company, site } from '@/content/company';
 import type { Dict } from '@/content/i18n';
-import { BASE } from '@/lib/base';
 import type { Locale } from '@/lib/i18n';
 import type { DeckSlide } from './Deck';
+import DeckImage from './DeckImage';
 import EuropeMap from './EuropeMap';
 
 /**
@@ -70,14 +70,14 @@ function Numbered({ items, from = 3, cols = 3 }: { items: readonly (readonly [st
   );
 }
 
+/** Full-bleed photograph: public/deck/<name>.jpg if it exists, else the site's hero. */
 function Photo({ src, position }: { src: string; position: string }) {
   return (
-    <img
-      src={`${BASE}${src}`}
-      alt=""
-      decoding="async"
+    <DeckImage
+      src={src}
+      fallback="/hero.jpg"
+      position={position}
       className="s-photo absolute inset-0 h-full w-full object-cover"
-      style={{ objectPosition: position }}
     />
   );
 }
@@ -91,7 +91,7 @@ export function buildSlides(locale: Locale, d: Dict): DeckSlide[] {
     id: 'cover', label: t.cover.title.replace(/\*/g, ''), tone: 'night',
     content: (
       <div className="relative min-h-full">
-        <Photo src="/hero.jpg" position="56% 58%" />
+        <Photo src="/deck/cover.jpg" position="56% 58%" />
         <div className="absolute inset-0 bg-gradient-to-t from-night-950 via-night-950/60 to-night-950/10" aria-hidden="true" />
         <div className="absolute inset-0 bg-gradient-to-r from-night-950/75 via-night-950/20 to-transparent" aria-hidden="true" />
         <Body className="relative !justify-end">
@@ -221,9 +221,12 @@ export function buildSlides(locale: Locale, d: Dict): DeckSlide[] {
               {t.town.quote}
             </blockquote>
           </div>
-          <dl className="grid grid-cols-2 gap-x-8 gap-y-10">
-            {t.town.stats.map(([v, l], k) => <Big key={l} v={v} l={l} i={4 + k} size="lg" />)}
-          </dl>
+          <div>
+            <DeckImage src="/deck/town.jpg" className="s mb-9 aspect-[16/9] w-full rounded-md object-cover" position="50% 60%" />
+            <dl className="grid grid-cols-2 gap-x-8 gap-y-10">
+              {t.town.stats.map(([v, l], k) => <Big key={l} v={v} l={l} i={4 + k} size="lg" />)}
+            </dl>
+          </div>
         </div>
       </Body>
     ),
@@ -458,7 +461,7 @@ export function buildSlides(locale: Locale, d: Dict): DeckSlide[] {
     id: 'close', label: t.close.title, tone: 'night',
     content: (
       <div className="relative min-h-full">
-        <Photo src="/hero.jpg" position="70% 60%" />
+        <Photo src="/deck/close.jpg" position="70% 60%" />
         <div className="absolute inset-0 bg-night-950/80" aria-hidden="true" />
         <div className="absolute inset-0 bg-gradient-to-t from-night-950 via-night-950/40 to-transparent" aria-hidden="true" />
         <Body className="relative items-center text-center">
