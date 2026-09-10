@@ -1,22 +1,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import type { Dict } from '@/content/i18n';
+import { eurM, num, pct } from '@/lib/format';
+import { fmt, type Locale } from '@/lib/i18n';
 
 /**
  * The unit economics of one site, live. Every number below is a desk estimate
  * from the research dossier — the point of making it interactive is that you can
  * push it until it breaks, which is more honest than a single flattering case.
  */
-
-const eur = (n: number) =>
-  new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
-
-const eurM = (n: number) =>
-  Math.abs(n) >= 1_000_000
-    ? `€${(n / 1_000_000).toFixed(Math.abs(n) >= 10_000_000 ? 1 : 2)}m`
-    : eur(n);
-
-const pct = (n: number) => `${(n * 100).toFixed(0)}%`;
 
 type Inputs = {
   mw: number;              // IT load, MW electrical
@@ -95,11 +88,9 @@ function Slider({
 }) {
   return (
     <div>
-      <div className="mb-1.5 flex items-baseline justify-between gap-3">
-        <label className="text-[0.86rem] font-semibold text-ink">{label}</label>
-        <span className="rounded-md bg-sand-200 px-2 py-0.5 font-mono text-[0.8rem] tabular-nums text-ink">
-          {format(value)}
-        </span>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <label className="text-[0.86rem] font-medium text-ink">{label}</label>
+        <span className="font-mono text-[0.78rem] tabular-nums text-ink">{format(value)}</span>
       </div>
       <input
         type="range"
@@ -110,27 +101,27 @@ function Slider({
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label={label}
       />
-      {hint ? <p className="mt-1.5 text-[0.75rem] leading-snug text-ink-faint">{hint}</p> : null}
+      {hint ? <p className="mt-2 text-[0.75rem] leading-snug text-ink-faint">{hint}</p> : null}
     </div>
   );
 }
 
-function Bar({ label, value, max, color, money }: { label: string; value: number; max: number; color: string; money?: boolean }) {
+function Bar({ label, value, max, color, locale }: { label: string; value: number; max: number; color: string; locale: Locale }) {
   const w = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (
     <div>
-      <div className="mb-1 flex items-baseline justify-between text-[0.83rem]">
+      <div className="mb-1.5 flex items-baseline justify-between text-[0.84rem]">
         <span className="text-ink-soft">{label}</span>
-        <span className="font-semibold tabular-nums">{money ? eurM(value) : value.toFixed(0)}</span>
+        <span className="font-mono text-[0.78rem] tabular-nums text-ink">{eurM(locale, value)}</span>
       </div>
-      <div className="h-2.5 overflow-hidden rounded-full bg-sand-200">
-        <div className={`h-full rounded-full ${color} transition-[width] duration-300`} style={{ width: `${w}%` }} />
+      <div className="h-[6px] overflow-hidden bg-paper-2">
+        <div className={`h-full ${color} transition-[width] duration-300`} style={{ width: `${w}%` }} />
       </div>
     </div>
   );
 }
 
-export default function BusinessModel() {
+export default function BusinessModel({ locale, t }: { locale: Locale; t: Dict['model'] }) {
   const [i, setI] = useState<Inputs>(DEFAULTS);
   const set = <K extends keyof Inputs>(k: K) => (v: number) => setI((p) => ({ ...p, [k]: v }));
   const m = useMemo(() => model(i), [i]);
@@ -138,49 +129,56 @@ export default function BusinessModel() {
   const maxBar = Math.max(m.computeRevenue, m.heatRevenue, m.powerCost, m.otherOpex);
   const heatDelta = m.ebitda - m.ebitdaNoHeat;
 
+  // €380/kW/mo vs 380 €/kW/mes.
+  const eurUnit = (n: number, unit: string, dp = 0) =>
+    locale === 'sk' ? `${num(locale, n, dp)} €${unit}` : `€${num(locale, n, dp)}${unit}`;
+  const n0 = (n: number) => num(locale, Math.round(n));
+  const label = 'font-mono text-label uppercase text-ink-muted';
+  const big = 'mt-3 font-display text-[2.1rem] leading-none tracking-tight tabular';
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
       {/* ------------------------------------------------------- inputs */}
-      <div className="min-w-0 rounded-2xl border border-sand-300 bg-white p-6">
-        <div className="mb-5 flex items-center justify-between">
-          <h3 className="text-[1.02rem] font-bold">Assumptions</h3>
+      <div className="min-w-0 rounded-md border border-line bg-card p-6">
+        <div className="mb-6 flex items-baseline justify-between border-b border-line pb-3">
+          <h3 className="font-display text-[1.2rem]">{t.assumptions}</h3>
           <button
             type="button"
             onClick={() => setI(DEFAULTS)}
-            className="rounded-full border border-sand-300 px-3 py-1 text-[0.76rem] font-semibold text-ink-muted hover:border-ink-faint hover:text-ink"
+            className="font-mono text-[0.7rem] uppercase tracking-[0.1em] text-ink-muted underline underline-offset-4 hover:text-ink"
           >
-            Reset
+            {t.reset}
           </button>
         </div>
 
-        <div className="space-y-5">
-          <Slider label="IT load" value={i.mw} min={1} max={20} step={0.5}
-            onChange={set('mw')} format={(n) => `${n} MW`}
-            hint="Electrical load of the servers themselves, excluding cooling." />
-          <Slider label="Utilisation" value={i.utilisation} min={0.3} max={0.95} step={0.05}
-            onChange={set('utilisation')} format={pct}
-            hint="Share of installed capacity actually sold and running." />
-          <Slider label="Compute price" value={i.computeRate} min={120} max={900} step={10}
-            onChange={set('computeRate')} format={(n) => `€${n}/kW/mo`}
-            hint="Blended monthly revenue per kW of sold IT capacity. Wholesale colocation sits near €150; selling the same rack as cloud VMs is several hundred." />
-          <Slider label="Electricity price" value={i.powerPrice} min={50} max={250} step={5}
-            onChange={set('powerPrice')} format={(n) => `€${n}/MWh`} />
+        <div className="space-y-6">
+          <Slider label={t.itLoad} value={i.mw} min={1} max={20} step={0.5}
+            onChange={set('mw')} format={(n) => `${num(locale, n, n % 1 ? 1 : 0)} MW`}
+            hint={t.itLoadHint} />
+          <Slider label={t.utilisation} value={i.utilisation} min={0.3} max={0.95} step={0.05}
+            onChange={set('utilisation')} format={(n) => pct(locale, n)}
+            hint={t.utilisationHint} />
+          <Slider label={t.computePrice} value={i.computeRate} min={120} max={900} step={10}
+            onChange={set('computeRate')} format={(n) => eurUnit(n, t.computeUnit)}
+            hint={t.computePriceHint} />
+          <Slider label={t.powerPrice} value={i.powerPrice} min={50} max={250} step={5}
+            onChange={set('powerPrice')} format={(n) => eurUnit(n, '/MWh')} />
 
-          <div className="border-t border-sand-200 pt-5">
-            <p className="mb-4 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-ember-600">Heat contract</p>
-            <div className="space-y-5">
-              <Slider label="Utility's gas heat cost" value={i.gasHeat} min={50} max={150} step={0.5}
-                onChange={set('gasHeat')} format={(n) => `€${n}/MWh`}
-                hint="The regulated Slovak delivered heat price is around €93/MWh." />
-              <Slider label="Our discount to it" value={i.discount} min={0} max={0.45} step={0.01}
-                onChange={set('discount')} format={pct}
-                hint="What the utility saves. Below about 10% they have no reason to sign." />
-              <Slider label="Annual offtake" value={i.offtake} min={0} max={0.85} step={0.05}
-                onChange={set('offtake')} format={pct}
-                hint="Share of recoverable heat the network takes across the year. Summer demand collapses, so this is never near 100%." />
-              <Slider label="Heat pump COP" value={i.cop} min={2.5} max={6} step={0.1}
-                onChange={set('cop')} format={(n) => n.toFixed(1)}
-                hint="Units of heat delivered per unit of electricity consumed lifting it." />
+          <div className="border-t border-line pt-6">
+            <p className="mb-5 font-mono text-label uppercase text-heat-600">{t.heatContract}</p>
+            <div className="space-y-6">
+              <Slider label={t.gasHeat} value={i.gasHeat} min={50} max={150} step={0.5}
+                onChange={set('gasHeat')} format={(n) => eurUnit(n, '/MWh', n % 1 ? 1 : 0)}
+                hint={t.gasHeatHint} />
+              <Slider label={t.discount} value={i.discount} min={0} max={0.45} step={0.01}
+                onChange={set('discount')} format={(n) => pct(locale, n)}
+                hint={t.discountHint} />
+              <Slider label={t.offtake} value={i.offtake} min={0} max={0.85} step={0.05}
+                onChange={set('offtake')} format={(n) => pct(locale, n)}
+                hint={t.offtakeHint} />
+              <Slider label={t.cop} value={i.cop} min={2.5} max={6} step={0.1}
+                onChange={set('cop')} format={(n) => num(locale, n, 1)}
+                hint={t.copHint} />
             </div>
           </div>
         </div>
@@ -188,109 +186,98 @@ export default function BusinessModel() {
 
       {/* ------------------------------------------------------ outputs */}
       <div className="min-w-0 space-y-6">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-sand-300 bg-white p-5">
-            <p className="text-[0.72rem] font-bold uppercase tracking-[0.14em] text-ink-faint">Revenue / year</p>
-            <p className="mt-2 text-[1.9rem] font-bold leading-none tracking-tight tabular-nums">{eurM(m.revenue)}</p>
-            <p className="mt-2 text-[0.79rem] text-ink-muted">
-              {pct(m.heatShare)} of it from heat
-            </p>
+        <div className="grid gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-3">
+          <div className="bg-card p-5">
+            <p className={label}>{t.revenueYear}</p>
+            <p className={big}>{eurM(locale, m.revenue)}</p>
+            <p className="mt-2.5 text-[0.79rem] text-ink-muted">{fmt(t.fromHeat, { pct: pct(locale, m.heatShare) })}</p>
           </div>
-          <div className="rounded-2xl border border-sand-300 bg-white p-5">
-            <p className="text-[0.72rem] font-bold uppercase tracking-[0.14em] text-ink-faint">EBITDA / year</p>
-            <p className={`mt-2 text-[1.9rem] font-bold leading-none tracking-tight tabular-nums ${
-              m.ebitda >= 0 ? 'text-ink' : 'text-red-600'
-            }`}>
-              {eurM(m.ebitda)}
-            </p>
-            <p className="mt-2 text-[0.79rem] text-ink-muted">{pct(m.margin)} margin</p>
+          <div className="bg-card p-5">
+            <p className={label}>{t.ebitdaYear}</p>
+            <p className={`${big} ${m.ebitda >= 0 ? 'text-ink' : 'text-alert'}`}>{eurM(locale, m.ebitda)}</p>
+            <p className="mt-2.5 text-[0.79rem] text-ink-muted">{fmt(t.margin, { pct: pct(locale, m.margin) })}</p>
           </div>
-          <div className="rounded-2xl border-2 border-ember-300 bg-ember-50 p-5">
-            <p className="text-[0.72rem] font-bold uppercase tracking-[0.14em] text-ember-700">What the heat adds</p>
-            <p className="mt-2 text-[1.9rem] font-bold leading-none tracking-tight tabular-nums text-ember-700">
-              {heatDelta >= 0 ? '+' : ''}{eurM(heatDelta)}
+          <div className="bg-heat-50 p-5">
+            <p className="font-mono text-label uppercase text-heat-700">{t.heatAdds}</p>
+            <p className={`${big} text-heat-600`}>
+              {heatDelta >= 0 ? '+' : ''}{eurM(locale, heatDelta)}
             </p>
-            <p className="mt-2 text-[0.79rem] text-ember-700/80">
-              EBITDA without the heat contract: {eurM(m.ebitdaNoHeat)}
-            </p>
+            <p className="mt-2.5 text-[0.79rem] text-heat-800/80">{fmt(t.ebitdaNoHeat, { v: eurM(locale, m.ebitdaNoHeat) })}</p>
           </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="min-w-0 rounded-2xl border border-sand-300 bg-white p-6">
-            <h3 className="mb-4 text-[0.95rem] font-bold">Where the money comes from</h3>
-            <div className="space-y-3.5">
-              <Bar label="Compute revenue" value={m.computeRevenue} max={maxBar} color="bg-teal-600" money />
-              <Bar label="Heat revenue" value={m.heatRevenue} max={maxBar} color="bg-ember-500" money />
+          <div className="min-w-0 rounded-md border border-line bg-card p-6">
+            <h3 className="mb-5 font-display text-[1.15rem]">{t.whereFrom}</h3>
+            <div className="space-y-4">
+              <Bar label={t.computeRevenue} value={m.computeRevenue} max={maxBar} color="bg-water-500" locale={locale} />
+              <Bar label={t.heatRevenue} value={m.heatRevenue} max={maxBar} color="bg-heat-500" locale={locale} />
             </div>
-            <h3 className="mb-4 mt-6 text-[0.95rem] font-bold">Where it goes</h3>
-            <div className="space-y-3.5">
-              <Bar label="Electricity" value={m.powerCost} max={maxBar} color="bg-night-700" money />
-              <Bar label="Staff, network, spares" value={m.otherOpex} max={maxBar} color="bg-ink-faint" money />
-              <Bar label="Thermal maintenance" value={m.heatOpex} max={maxBar} color="bg-sand-400" money />
+            <h3 className="mb-5 mt-8 font-display text-[1.15rem]">{t.whereTo}</h3>
+            <div className="space-y-4">
+              <Bar label={t.electricity} value={m.powerCost} max={maxBar} color="bg-night-700" locale={locale} />
+              <Bar label={t.staff} value={m.otherOpex} max={maxBar} color="bg-ink-faint" locale={locale} />
+              <Bar label={t.thermalMaint} value={m.heatOpex} max={maxBar} color="bg-paper-3" locale={locale} />
             </div>
           </div>
 
-          <div className="rounded-2xl border border-sand-300 bg-white p-6">
-            <h3 className="mb-4 text-[0.95rem] font-bold">What the site physically does</h3>
-            <dl className="space-y-3 text-[0.87rem]">
+          <div className="rounded-md border border-line bg-card p-6">
+            <h3 className="mb-4 font-display text-[1.15rem]">{t.physical}</h3>
+            <dl className="kv text-[0.87rem]">
               {[
-                ['IT electricity consumed', `${Math.round(m.itEnergy).toLocaleString('en-IE')} MWh/yr`],
-                ['Heat recoverable', `${Math.round(m.recoverable).toLocaleString('en-IE')} MWh/yr`],
-                ['Heat actually delivered', `${Math.round(m.delivered).toLocaleString('en-IE')} MWh/yr`],
-                ['Price we sell heat at', `€${m.heatPrice.toFixed(1)}/MWh`],
-                ['Electricity to lift it', `${Math.round(m.pumpEnergy).toLocaleString('en-IE')} MWh/yr`],
-                ['Flats heated', `~${m.flats.toLocaleString('en-IE')}`],
-                ['Gas CO₂ displaced', `${Math.round(m.co2).toLocaleString('en-IE')} t/yr`],
+                [t.itConsumed, `${n0(m.itEnergy)} ${t.mwhYr}`],
+                [t.recoverable, `${n0(m.recoverable)} ${t.mwhYr}`],
+                [t.delivered, `${n0(m.delivered)} ${t.mwhYr}`],
+                [t.heatPrice, eurUnit(m.heatPrice, '/MWh', 1)],
+                [t.pumpEnergy, `${n0(m.pumpEnergy)} ${t.mwhYr}`],
+                [t.flats, `~${num(locale, m.flats)}`],
+                [t.co2, `${n0(m.co2)} ${t.tYr}`],
               ].map(([k, v]) => (
-                <div key={k} className="flex items-baseline justify-between gap-4 border-b border-sand-200 pb-2 last:border-0">
+                <div key={k}>
                   <dt className="text-ink-muted">{k}</dt>
-                  <dd className="font-semibold tabular-nums">{v}</dd>
+                  <dd className="font-mono text-[0.8rem] tabular-nums text-ink">{v}</dd>
                 </div>
               ))}
             </dl>
-            <div className="mt-5 rounded-xl bg-sand-100 p-4">
+            <div className="mt-5 border-t border-ink pt-4">
               <div className="flex items-baseline justify-between text-[0.87rem]">
-                <span className="text-ink-muted">Capex, both halves</span>
-                <span className="font-semibold tabular-nums">{eurM(m.capex)}</span>
+                <span className="text-ink-muted">{t.capex}</span>
+                <span className="font-mono text-[0.8rem] tabular-nums text-ink">{eurM(locale, m.capex)}</span>
               </div>
               <div className="mt-2 flex items-baseline justify-between text-[0.87rem]">
-                <span className="text-ink-muted">Simple payback</span>
-                <span className="font-semibold tabular-nums">
-                  {Number.isFinite(m.payback) ? `${m.payback.toFixed(1)} years` : 'never at these inputs'}
+                <span className="text-ink-muted">{t.payback}</span>
+                <span className="font-mono text-[0.8rem] tabular-nums text-ink">
+                  {Number.isFinite(m.payback) ? fmt(t.years, { n: num(locale, m.payback, 1) }) : t.never}
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="min-w-0 rounded-2xl border border-sand-300 bg-sand-50 p-6">
-          <h3 className="mb-1 text-[0.95rem] font-bold">Sensitivity — EBITDA against the gas price the heat is indexed to</h3>
-          <p className="mb-4 text-[0.82rem] text-ink-muted">
-            Everything else held at your current settings. This is the line that decides whether a
-            heat contract is worth signing for either side.
-          </p>
+        <div className="min-w-0 rounded-md border border-line bg-card p-6">
+          <h3 className="mb-1 font-display text-[1.15rem]">{t.sensTitle}</h3>
+          <p className="mb-2 text-[0.84rem] text-ink-muted">{t.sensLede}</p>
           <div className="tbl">
             <table>
               <thead>
                 <tr>
-                  <th>Utility&apos;s gas heat cost</th>
-                  <th className="num">Our heat price</th>
-                  <th className="num">Heat revenue</th>
-                  <th className="num">EBITDA</th>
-                  <th className="num">vs no heat contract</th>
+                  <th>{t.sensGas}</th>
+                  <th className="num">{t.sensOurPrice}</th>
+                  <th className="num">{t.sensHeatRevenue}</th>
+                  <th className="num">{t.sensEbitda}</th>
+                  <th className="num">{t.sensVsNoHeat}</th>
                 </tr>
               </thead>
               <tbody>
                 {[60, 75, 93.4, 110, 130].map((g) => {
                   const s = model({ ...i, gasHeat: g });
                   return (
-                    <tr key={g} className={Math.abs(g - i.gasHeat) < 0.05 ? 'bg-ember-50' : ''}>
-                      <td>€{g.toFixed(1)}/MWh{g === 93.4 ? ' — today' : ''}</td>
-                      <td className="num">€{s.heatPrice.toFixed(1)}</td>
-                      <td className="num">{eurM(s.heatRevenue)}</td>
-                      <td className="num">{eurM(s.ebitda)}</td>
-                      <td className="num font-semibold text-ember-700">+{eurM(s.ebitda - s.ebitdaNoHeat)}</td>
+                    <tr key={g} className={Math.abs(g - i.gasHeat) < 0.05 ? 'hl' : ''}>
+                      <td>{eurUnit(g, '/MWh', g % 1 ? 1 : 0)}{g === 93.4 ? ` — ${t.sensToday}` : ''}</td>
+                      <td className="num">{eurUnit(s.heatPrice, '', 1)}</td>
+                      <td className="num">{eurM(locale, s.heatRevenue)}</td>
+                      <td className="num">{eurM(locale, s.ebitda)}</td>
+                      <td className="num font-medium text-heat-700">+{eurM(locale, s.ebitda - s.ebitdaNoHeat)}</td>
                     </tr>
                   );
                 })}
@@ -299,12 +286,7 @@ export default function BusinessModel() {
           </div>
         </div>
 
-        <p className="text-[0.79rem] leading-relaxed text-ink-faint">
-          Desk estimates for evaluation. Capex is assumed at €6.8m/MW for the datacenter and
-          €1.1m/MW for the thermal plant; overhead opex at €800k/MW/year; PUE 1.15; heat recovery
-          95% of IT load; a Slovak flat at 8.5 MWh/year; gas heat at 0.202 t CO₂/MWh. These are not
-          engineering figures, not an offer, and not investment advice.
-        </p>
+        <p className="text-[0.79rem] leading-relaxed text-ink-faint">{t.footnote}</p>
       </div>
     </div>
   );

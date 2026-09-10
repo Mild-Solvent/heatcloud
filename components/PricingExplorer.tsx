@@ -1,9 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { groups, services } from '@/content/services';
-import { site } from '@/content/company';
+import { useState } from 'react';
+import type { Dict } from '@/content/i18n';
+import type { Group } from '@/content/types';
+import { money } from '@/lib/format';
+import { fmt, plural, type Locale } from '@/lib/i18n';
+import { Link } from '@/lib/locale';
 
 /**
  * Every plan in the catalogue, in one filterable table. The two toggles are the
@@ -11,110 +13,80 @@ import { site } from '@/content/company';
  * I save by paying yearly.
  */
 
-type Row = {
+export type Row = {
   service: string; slug: string; group: string; plan: string; for: string;
-  includes: string; price: string; unit: string; numeric: number | null;
+  includes: string; price: number | string; unit: string; metered: boolean;
 };
 
 const ANNUAL_DISCOUNT = 0.15;
 
-// "€11.90" -> 11.9 ; "−50%" / "+100%" / "€0.0061" all handled or skipped.
-function parsePrice(p: string): number | null {
-  const m = p.match(/^€([\d.]+)$/);
-  return m ? Number(m[1]) : null;
-}
-
-function buildRows(): Row[] {
-  return services.flatMap((s) =>
-    (s.plans || []).map((p) => ({
-      service: s.name,
-      slug: s.slug,
-      group: s.group,
-      plan: p.name,
-      for: p.for,
-      includes: p.specs.map((x) => [x[0], x[1]].filter(Boolean).join(' ')).join(', '),
-      price: p.price,
-      unit: p.unit || '/month',
-      numeric: parsePrice(p.price),
-    })),
-  );
-}
-
-export default function PricingExplorer() {
+export default function PricingExplorer({
+  locale, t, tc, groups, rows, vat,
+}: {
+  locale: Locale; t: Dict['pricing']; tc: Dict['common']; groups: Group[]; rows: Row[]; vat: number;
+}) {
   const [group, setGroup] = useState<string>('all');
   const [withVat, setWithVat] = useState(false);
   const [annual, setAnnual] = useState(false);
-  const rows = useMemo(buildRows, []);
 
   const shown = group === 'all' ? rows : rows.filter((r) => r.group === group);
 
   const display = (r: Row) => {
-    if (r.numeric === null) return r.price;
-    let v = r.numeric;
+    if (typeof r.price === 'string') return r.price;
+    let v = r.price;
     // Annual billing applies to recurring subscriptions, not to metered rates.
-    const recurring = r.unit.includes('month') || r.unit.includes('year');
-    if (annual && recurring) v *= 1 - ANNUAL_DISCOUNT;
-    if (withVat) v *= 1 + site.vatRate / 100;
-    const dp = v < 1 ? 4 : 2;
-    return `€${v.toFixed(dp)}`;
+    if (annual && !r.metered) v *= 1 - ANNUAL_DISCOUNT;
+    if (withVat) v *= 1 + vat / 100;
+    return money(locale, v);
   };
+
+  const chip = (active: boolean) =>
+    `rounded-sm border px-3 py-1 font-mono text-[0.7rem] uppercase tracking-[0.1em] transition-colors ${
+      active ? 'border-ink bg-ink text-paper' : 'border-line-strong text-ink-soft hover:border-ink hover:text-ink'
+    }`;
 
   return (
     <div>
       {/* ---------------------------------------------------- controls */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-sand-300 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by product group">
-          <button
-            type="button"
-            onClick={() => setGroup('all')}
-            aria-pressed={group === 'all'}
-            className={`rounded-full px-3.5 py-1.5 text-[0.83rem] font-semibold transition ${
-              group === 'all' ? 'bg-ink text-white' : 'bg-sand-100 text-ink-soft hover:bg-sand-200'
-            }`}
-          >
-            All
+      <div className="flex flex-col gap-4 border-y border-line py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t.filterLabel}>
+          <button type="button" onClick={() => setGroup('all')} aria-pressed={group === 'all'} className={chip(group === 'all')}>
+            {t.all}
           </button>
           {groups.filter((g) => rows.some((r) => r.group === g.key)).map((g) => (
-            <button
-              key={g.key}
-              type="button"
-              onClick={() => setGroup(g.key)}
-              aria-pressed={group === g.key}
-              className={`rounded-full px-3.5 py-1.5 text-[0.83rem] font-semibold transition ${
-                group === g.key ? 'bg-ink text-white' : 'bg-sand-100 text-ink-soft hover:bg-sand-200'
-              }`}
-            >
+            <button key={g.key} type="button" onClick={() => setGroup(g.key)} aria-pressed={group === g.key} className={chip(group === g.key)}>
               {g.title}
             </button>
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="flex cursor-pointer items-center gap-2 text-[0.85rem] font-medium">
+        <div className="flex flex-wrap items-center gap-5">
+          <label className="flex cursor-pointer items-center gap-2 text-[0.85rem]">
             <input
               type="checkbox"
               checked={annual}
               onChange={(e) => setAnnual(e.target.checked)}
-              className="h-4 w-4 rounded border-sand-400 text-ember-600 focus:ring-ember-500"
+              className="h-4 w-4 rounded-sm border-line-strong text-heat-500 focus:ring-heat-500"
             />
-            Annual billing <span className="text-ink-faint">(−15%)</span>
+            {t.annual} <span className="font-mono text-[0.72rem] text-ink-faint">{t.annualNote}</span>
           </label>
-          <label className="flex cursor-pointer items-center gap-2 text-[0.85rem] font-medium">
+          <label className="flex cursor-pointer items-center gap-2 text-[0.85rem]">
             <input
               type="checkbox"
               checked={withVat}
               onChange={(e) => setWithVat(e.target.checked)}
-              className="h-4 w-4 rounded border-sand-400 text-ember-600 focus:ring-ember-500"
+              className="h-4 w-4 rounded-sm border-line-strong text-heat-500 focus:ring-heat-500"
             />
-            Show with {site.vatRate}% VAT
+            {fmt(t.withVat, { vat })}
           </label>
         </div>
       </div>
 
-      <p className="mt-3 text-[0.8rem] text-ink-faint">
-        Showing {shown.length} plans{annual ? ', annual rate on recurring subscriptions' : ''}
-        {withVat ? `, including ${site.vatRate}% Slovak VAT` : ', excluding VAT'}. Metered rates are
-        not discounted for annual billing.
+      <p className="mt-3 font-mono text-[0.7rem] text-ink-faint">
+        {fmt(t.showing, { n: shown.length, plans: plural(locale, shown.length, tc.plans) })}
+        {annual ? t.showingAnnual : ''}
+        {withVat ? fmt(t.showingVat, { vat }) : t.showingNoVat}
+        {t.showingMetered}
       </p>
 
       {/* ------------------------------------------------------- table */}
@@ -122,27 +94,25 @@ export default function PricingExplorer() {
         <table>
           <thead>
             <tr>
-              <th>Product</th>
-              <th>Plan</th>
-              <th>For</th>
-              <th>Includes</th>
-              <th className="num">Price</th>
+              <th>{t.colProduct}</th>
+              <th>{t.colPlan}</th>
+              <th>{t.colFor}</th>
+              <th>{t.colIncludes}</th>
+              <th className="num">{t.colPrice}</th>
             </tr>
           </thead>
           <tbody>
             {shown.map((r) => (
               <tr key={`${r.slug}-${r.plan}`}>
                 <td>
-                  <Link href={`/products/${r.slug}/`} className="font-semibold text-teal-600 hover:underline">
-                    {r.service}
-                  </Link>
+                  <Link href={`/products/${r.slug}/`} className="link-ink font-medium">{r.service}</Link>
                 </td>
-                <td className="font-medium text-ink">{r.plan}</td>
+                <td className="text-ink">{r.plan}</td>
                 <td>{r.for}</td>
                 <td className="text-[0.82rem]">{r.includes}</td>
-                <td className="num">
-                  <span className="font-bold text-ink">{display(r)}</span>
-                  <span className="ml-1 text-[0.76rem] text-ink-faint">{r.unit}</span>
+                <td className="num whitespace-nowrap">
+                  <span className="font-mono text-[0.85rem] text-ink">{display(r)}</span>
+                  <span className="ml-1 font-mono text-[0.68rem] text-ink-faint">{r.unit}</span>
                 </td>
               </tr>
             ))}

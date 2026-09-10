@@ -1,83 +1,103 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * Infomaniak's layout DNA — white ground, generous rounding, one saturated
- * accent — with HeatCloud's warm palette instead of their blue. The two brand
- * colours are the ones already used by the research dossier: ember orange for
- * heat, deep teal for water and compute.
+ * Two colours, used for what they mean: heat is orange, water is blue. Orange
+ * marks the hot side of the loop, the heat revenue line, the primary action.
+ * Blue marks the return loop, compute, anything cool and running. Everything
+ * else is warm paper and ink — the site should read like a printed prospectus,
+ * not a dashboard.
  */
 const config: Config = {
   content: [
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
     './content/**/*.{ts,tsx}',
+    './lib/**/*.{ts,tsx}',
   ],
   theme: {
+    // Squared off. Pills and 24px corners are the first thing that makes a site
+    // look like every other site.
+    borderRadius: {
+      none: '0',
+      sm: '2px',
+      DEFAULT: '3px',
+      md: '4px',
+      lg: '6px',
+      xl: '8px',
+      '2xl': '10px',
+      '3xl': '12px',
+      full: '9999px',
+    },
     extend: {
       colors: {
+        paper: {
+          DEFAULT: '#f5f1ea',
+          2: '#ece6db',
+          3: '#e2dbcd',
+        },
+        card: '#fbf9f5',
+        line: {
+          DEFAULT: '#d8cfc0',
+          strong: '#b6aa96',
+        },
         ink: {
-          DEFAULT: '#141a22',
-          soft: '#3d4753',
-          muted: '#68727e',
-          faint: '#98a1ab',
+          DEFAULT: '#1b1a17',
+          soft: '#3d3a35',
+          muted: '#6b665e',
+          faint: '#958f85',
         },
-        ember: {
-          50: '#fdf5ef',
-          100: '#fae7d7',
-          200: '#f4cbaa',
-          300: '#eda878',
-          400: '#e8823f',
-          500: '#d96a24',
-          600: '#c25e1e',
-          700: '#9c4a18',
-          800: '#7a3a14',
-          900: '#5c2c10',
+        heat: {
+          50: '#fdf4ec',
+          100: '#fbe5d2',
+          200: '#f6c8a4',
+          300: '#efa26d',
+          400: '#e67c3c',
+          500: '#d9621f',
+          600: '#b95016',
+          700: '#933f13',
+          800: '#713211',
+          900: '#52250d',
         },
-        teal: {
-          50: '#eefaf9',
-          100: '#d1f2ef',
-          200: '#a3e5df',
-          300: '#66d0c8',
-          400: '#3fb5b5',
-          500: '#1a8f8f',
-          600: '#0e6e6e',
-          700: '#0c5757',
-          800: '#0a4545',
-          900: '#083636',
-        },
-        sand: {
-          50: '#fdfcfa',
-          100: '#f7f5f0',
-          200: '#efe9de',
-          300: '#e3ddd2',
-          400: '#cfc7b8',
+        water: {
+          50: '#eff5f8',
+          100: '#d9e7ee',
+          200: '#b6cfdc',
+          300: '#86afc5',
+          400: '#5a8dab',
+          500: '#3a7292',
+          600: '#2c5b78',
+          700: '#254a61',
+          800: '#1f3b4d',
+          900: '#172c3a',
         },
         night: {
-          700: '#1b222c',
-          800: '#161c24',
-          900: '#12161c',
+          700: '#22333f',
+          800: '#182530',
+          900: '#121c24',
+          950: '#0e161c',
         },
+        alert: '#b3382b',
       },
       fontFamily: {
-        sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        sans: ['var(--font-sans)', 'IBM Plex Sans', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        display: ['var(--font-display)', 'Fraunces', 'Georgia', 'Times New Roman', 'serif'],
+        mono: ['var(--font-mono)', 'IBM Plex Mono', 'Menlo', 'Consolas', 'monospace'],
       },
-      borderRadius: {
-        xl: '0.9rem',
-        '2xl': '1.25rem',
-        '3xl': '1.75rem',
-      },
-      boxShadow: {
-        card: '0 1px 2px rgba(20,26,34,.04), 0 10px 30px -12px rgba(20,26,34,.14)',
-        lift: '0 2px 6px rgba(20,26,34,.06), 0 24px 48px -20px rgba(20,26,34,.28)',
-        menu: '0 24px 60px -20px rgba(20,26,34,.35)',
+      fontSize: {
+        // Mono labels: small, spaced, uppercase.
+        label: ['0.68rem', { lineHeight: '1.2', letterSpacing: '0.12em' }],
       },
       maxWidth: {
-        page: '1200px',
+        page: '1280px',
+        prose: '44rem',
+      },
+      boxShadow: {
+        // The one shadow on the site: the open menu panel.
+        menu: '0 18px 40px -24px rgba(27,26,23,.35)',
       },
       keyframes: {
         rise: {
-          '0%': { transform: 'translateY(6px)', opacity: '0' },
+          '0%': { transform: 'translateY(4px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
         flow: {
@@ -86,8 +106,8 @@ const config: Config = {
         },
       },
       animation: {
-        rise: 'rise .28s ease-out both',
-        flow: 'flow 1.4s linear infinite',
+        rise: 'rise .22s ease-out both',
+        flow: 'flow 1.6s linear infinite',
       },
     },
   },

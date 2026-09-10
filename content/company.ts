@@ -3,53 +3,36 @@
 // The entity is not incorporated. The identifiers below are explicit
 // placeholders rather than invented registration numbers — a fabricated IČO on
 // a page shaped like a real company's legal notice is exactly the thing the
-// legal notice exists to prevent.
+// legal notice exists to prevent. The wording of the status, seat and register
+// lines lives in the dictionaries (content/i18n) so each language reads well.
 
 export const site = {
   name: 'HeatCloud',
   nameFull: 'HeatCloud Slovakia',
-  tagline: 'The Slovak cloud that heats towns',
   origin: 'https://mild-solvent.github.io/heatcloud',
+  dossier: 'https://mild-solvent.github.io/heatcloud-slovakia/',
   vatRate: 23, // Slovak standard rate since 2025-01-01
   updated: '2026-09-09',
-  version: '2.1-preview',
+  version: '3.0-preview',
 } as const;
 
 export const company = {
   legalName: 'HeatCloud Slovakia s. r. o.',
-  status: 'in formation (v zakladaní) — not yet incorporated',
-  seat: 'Bratislava, Slovak Republic',
-  ico: 'not yet assigned',
-  dic: 'not yet assigned',
-  icdph: 'not yet assigned',
-  register: 'to be registered in the Commercial Register of the Bratislava City Court',
   email: 'hello@heatcloud.sk',
   abuse: 'abuse@heatcloud.sk',
   security: 'security@heatcloud.sk',
   dpo: 'privacy@heatcloud.sk',
 } as const;
 
+export type RegionCode = 'sk-bts-1' | 'sk-kos-1' | 'sk-zil-1';
 export type Region = {
-  code: string; city: string; status: 'in design' | 'planned' | 'candidate';
-  heat: string; note: string; mw: number;
+  code: RegionCode; city: string; status: 'in design' | 'planned' | 'candidate'; mw: number;
 };
 
 export const regions: Region[] = [
-  {
-    code: 'sk-bts-1', city: 'Bratislava', status: 'in design', mw: 5,
-    heat: 'Bratislava CHP network (MH Teplárenský holding)',
-    note: 'Primary region. Two independent MV feeds, N+1 cooling, heat rejected to the city network above 5 °C ambient.',
-  },
-  {
-    code: 'sk-kos-1', city: 'Košice', status: 'planned', mw: 3,
-    heat: 'TEKO / Košice district heat',
-    note: 'Second region for in-country redundancy and east-Slovak latency.',
-  },
-  {
-    code: 'sk-zil-1', city: 'Žilina', status: 'candidate', mw: 2,
-    heat: 'Žilinská teplárenská',
-    note: 'Candidate site; heat offtake term sheet not signed.',
-  },
+  { code: 'sk-bts-1', city: 'Bratislava', status: 'in design', mw: 5 },
+  { code: 'sk-kos-1', city: 'Košice', status: 'planned', mw: 3 },
+  { code: 'sk-zil-1', city: 'Žilina', status: 'candidate', mw: 2 },
 ];
 
 // Reference figures from the research dossier. Desk estimates, not engineering.

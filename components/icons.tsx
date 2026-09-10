@@ -1,4 +1,5 @@
 import type { SVGProps } from 'react';
+import { BASE } from '@/lib/base';
 
 const PATHS: Record<string, string> = {
   server: 'M3 4h18a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM7 7.5h.01',
@@ -82,7 +83,7 @@ export function Icon({ name, className = 'h-6 w-6', ...rest }: { name: string } 
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.6}
+      strokeWidth={1.5}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
@@ -96,26 +97,27 @@ export function Icon({ name, className = 'h-6 w-6', ...rest }: { name: string } 
   );
 }
 
+/**
+ * The mark: a ring, two heat waves, three water lines — supplied as artwork
+ * (public/logo.png, lifted off its original black background) and served at
+ * 256 px for the header and footer.
+ */
 export function Logo({ className = 'h-8 w-8' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 48 48" className={className} aria-hidden="true" focusable="false">
-      <circle cx="24" cy="24" r="21" fill="none" stroke="currentColor" strokeOpacity=".28" strokeWidth="1.7" />
-      <g stroke="#0e6e6e" strokeWidth="2.5" strokeLinecap="round">
-        <line x1="12.96" y1="38.4" x2="35.04" y2="38.4" />
-        <line x1="14.3" y1="33.4" x2="33.7" y2="33.4" />
-        <line x1="15.66" y1="28.3" x2="32.34" y2="28.3" />
-      </g>
-      <g stroke="#c25e1e" strokeWidth="2.4" strokeLinecap="round" fill="none">
-        <path d="M14.4 21.1 C17.6 23.5, 20.8 23.5, 24 21.1 C27.2 18.7, 30.4 18.7, 33.6 21.1" />
-        <path d="M15.9 14.4 C18.6 16.3, 21.3 16.3, 24 14.4 C26.7 12.5, 29.4 12.5, 32.1 14.4" />
-      </g>
-    </svg>
+    <img
+      src={`${BASE}/logo-256.png`}
+      alt=""
+      width={256}
+      height={256}
+      decoding="async"
+      className={className}
+    />
   );
 }
 
 export function Chevron({ className = 'h-3 w-3' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"
+    <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
       className={className} aria-hidden="true">
       <path d="m2 4 3 3 3-3" />
     </svg>
@@ -124,16 +126,16 @@ export function Chevron({ className = 'h-3 w-3' }: { className?: string }) {
 
 export function Arrow({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
       strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M3 8h10M9 4l4 4-4 4" />
+      <path d="M2.5 8h11M9.5 4l4 4-4 4" />
     </svg>
   );
 }
 
 export function Check({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
       strokeLinejoin="round" className={className} aria-hidden="true">
       <path d="m3 8.5 3.2 3.2L13 5" />
     </svg>

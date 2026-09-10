@@ -3,7 +3,7 @@
 The commercial site for **HeatCloud Slovakia**: a cloud provider whose data
 centres sell their waste heat into Slovak district heating networks. Service
 catalogue, pricing, legal documents, and an interactive model of how the
-business works.
+business works — in Slovak and in English.
 
 **Live: https://mild-solvent.github.io/heatcloud/**
 
@@ -19,18 +19,22 @@ funding stack and the kill criteria — is a separate repository:
 
 ## What is here
 
-Next.js 16 (App Router) + Tailwind + TypeScript, exported to static HTML. 35
-routes, no server, no database.
+Next.js 16 (App Router) + Tailwind + TypeScript, exported to static HTML. Two
+languages, 71 routes, no server, no database.
 
 | Route | What it is |
 | --- | --- |
-| `/` | The pitch, the heat-flow diagram, the product grid |
-| `/products/` + 14 pages | Cloud Servers, Public Cloud, Kubernetes, GPU Cloud, Object Storage, Databases, Backup, Web Hosting, Domains, Streaming, hSuite, hMail, hDrive, Heat Offtake |
-| `/pricing/` | Every plan in one filterable table, with VAT and annual-billing toggles |
-| **`/business/`** | **The interactive unit-economics model** — sliders for load, utilisation, compute price, power price, gas price, discount, offtake and heat-pump COP; live EBITDA, revenue split, sensitivity table, and a with/without-heat comparison |
-| **`/console/`** | **A mock of the customer console** — instances, storage, invoice, and a heat-contribution tab |
-| `/heat/`, `/datacenters/`, `/about/`, `/support/`, `/contact/` | The rest |
-| `/legal/` + 7 documents | Terms, AUP, SLA, Privacy, DPA, Cookies, Legal notice |
+| `/` | Picks a language from the browser (`/en/` for English browsers, `/sk/` otherwise) — a script, a meta refresh fallback, and two links |
+| `/sk/…`, `/en/…` | The whole site, once per language. The header switch takes you to the same page in the other one |
+| `/{lang}/` | The photograph, the pitch, the heat-flow diagram, the product list |
+| `/{lang}/products/` + 14 pages | Cloud Servers, Public Cloud, Kubernetes, GPU Cloud, Object Storage, Databases, Backup, Web Hosting, Domains, Streaming, hSuite, hMail, hDrive, Heat Offtake |
+| `/{lang}/pricing/` | Every plan in one filterable table, with VAT and annual-billing toggles |
+| **`/{lang}/business/`** | **The interactive unit-economics model** — sliders for load, utilisation, compute price, power price, gas price, discount, offtake and heat-pump COP; live EBITDA, revenue split, sensitivity table, and a with/without-heat comparison |
+| **`/{lang}/console/`** | **A mock of the customer console** — instances, storage, invoice, and a heat-contribution tab |
+| `/{lang}/heat/`, `/datacenters/`, `/about/`, `/support/`, `/contact/` | The rest |
+| `/{lang}/legal/` + 7 documents | Terms, AUP, SLA, Privacy, DPA, Cookies, Legal notice |
+| **`/{lang}/investors/`** | **The investor presentation** — a full-screen deck of 16 slides driven by keyboard, wheel, swipe and buttons, with its own root layout (no site header): the model, seven precedents abroad on a map, the regulatory tailwind, what a district town gets, the unit economics, the financing of the two halves, the plan, the risks, the ask, the sources. `#7` in the URL opens slide 7; F is full screen |
+| `404.html` | Bilingual, because a static server cannot know which language was wanted |
 
 Everything is clickable and the interactive parts run in the browser. What does
 not exist is a backend: the contact form composes a `mailto:` in your own mail
@@ -38,18 +42,48 @@ client, and the console shows fixed illustrative data.
 
 The legal texts are drafts written to Slovak and EU shape (Act 22/2004 on
 electronic commerce, Act 102/2014 on consumer distance contracts, Act 431/2002
-on accounting, GDPR Articles 28/32/33, EED 2023/1791 for the heat side). **No
-advocate has reviewed them.** Each document says so at the top.
+on accounting, GDPR Articles 28/32/33, EED 2023/1791 for the heat side). The
+Slovak versions are translations of the same drafts. **No advocate has reviewed
+either language.** Each document says so at the top.
+
+## Design
+
+Two colours, used for what they mean: **orange is heat**, **blue is water**.
+Orange marks the hot side of the loop, the heat revenue line and the primary
+action; blue marks the return loop, compute, and anything cool and running.
+Everything else is warm paper and ink, hairlines rather than boxes, mono
+captions rather than badges, and Fraunces for the headings over IBM Plex for the
+text and figures. The fonts are fetched at build time by `next/font` and served
+from the site's own files, so the cookie policy's "no third-party requests"
+stays true.
+
+The photograph on the home page is a visualisation of an intended site, not a
+photograph of a built one. It says so in the caption and in the legal notice.
+`public/hero.jpg` (1672 px) and `public/hero-1200.jpg` are the two sizes it is
+served in; `public/og.jpg` is the 1200×630 crop used for link previews.
+
+The mark — a ring, two heat waves, three water lines — is supplied artwork:
+`public/logo.png` (1220 px, transparent) and `public/logo-white.png` are the
+masters, `public/logo-256.png` is what the header and footer load, and
+`icon-192.png`, `icon-512.png` and `apple-touch-icon.png` are the favicons cut
+from it. The heat-flow illustration on the home and heat pages is hand-drawn
+SVG in `components/HeatFlow.tsx`, in the same palette.
 
 ## Where the content lives
 
 | File | What it holds |
 | --- | --- |
-| `content/services.ts` | The whole catalogue — one object per product. Drives the mega-menu, the product pages, `/pricing/` and the footer. Add an object and everything follows. |
-| `content/legal.ts` | The seven legal documents, as arrays of `{ h, body }` sections |
-| `content/company.ts` | Brand, placeholder legal identity, regions, reference figures |
+| `content/i18n/en.ts`, `content/i18n/sk.ts` | Every string the pages and components show. `sk.ts` is typed against `en.ts`, so a key missing on either side fails `typecheck` |
+| `content/services.en.ts`, `content/services.sk.ts` | The catalogue — one object per product in each language, same slugs, same plans. Prices are numbers and are formatted per locale (`€4.90` / `4,90 €`). Drives the mega-menu, the product list, the product pages, `/pricing/` and the footer |
+| `content/legal.en.ts`, `content/legal.sk.ts` | The seven legal documents, as arrays of `{ h, body }` sections |
+| `content/company.ts` | Brand, contact addresses, regions, reference figures (language-neutral) |
+| `content/services.ts`, `content/legal.ts` | The per-locale accessors. They assert at import time that the two language files agree on slugs and plan counts |
+| `lib/i18n.ts`, `lib/locale.tsx` | Locale list, href localisation, plural rules, and the `Link` that adds the language prefix so pages can keep writing `href="/pricing/"` |
 | `components/BusinessModel.tsx` | The interactive model, with every assumption as a named constant |
-| `components/HeatFlow.tsx` | The hero diagram — electricity in, compute out of the top, heat out of the side |
+| `components/HeatFlow.tsx` | The diagram — electricity in, compute out of the top, heat out of the side, water back |
+
+Rich dictionary strings use a three-token markup rendered by
+`components/RichText.tsx`: `[label](/path/)` for links, `**bold**`, `*italic*`.
 
 ### The model's assumptions
 
@@ -75,7 +109,8 @@ npm run typecheck
 
 `npm run build` writes `out/`, a plain directory of HTML any web server can
 serve. Set `NEXT_PUBLIC_BASE_PATH=/heatcloud` when building for a GitHub Pages
-project site; leave it unset to serve from a domain root.
+project site; leave it unset to serve from a domain root. The build needs
+network access once, to fetch the fonts.
 
 ## Deploying
 
@@ -94,22 +129,24 @@ node uitest.mjs http://host:8420
 
 ## Testing
 
-- `smoke.sh` — 48 HTTP checks: every route, assets, `robots.txt`, 404 handling,
-  and content spot checks.
-- `uitest.mjs` — 20 browser checks with Playwright: drives the mega-menu, the
-  model sliders, the console tabs, the VAT toggle and the FAQ accordions, then
-  sweeps all 32 content routes at three viewport widths looking for horizontal
-  overflow. Writes screenshots to `shots/`. Needs chromium once:
-  `npx playwright@1.63.0 install chromium`.
+- `smoke.sh` — HTTP checks over both languages: every route, assets,
+  `robots.txt`, the root redirect, the bilingual 404, the language switch, and
+  content spot checks.
+- `uitest.mjs` — browser checks with Playwright: the root redirect, the
+  mega-menu, the language switch, the model sliders, the console tabs, the VAT
+  toggle, the FAQ accordions, locale-prefixed cross-links inside the legal
+  documents, then a sweep of all 64 content routes at three viewport widths
+  looking for horizontal overflow. Writes screenshots to `shots/`. Needs
+  chromium once: `npx playwright@1.63.0 install chromium`.
 
 Both take a base URL, so they can be pointed at the Pages deployment as easily as
 at a local build.
 
 ## Not done yet
 
-- **Slovak translation.** The dossier is bilingual; this is English only. Content
-  is fully separated from components, so a second locale is a content addition
-  rather than a rewrite — but a Slovak provider's terms of business should exist
-  in Slovak first.
 - No backend, by design for now: no accounts, no ordering, no real console.
-- No Open Graph image of its own; it borrows the dossier's.
+- The Slovak legal texts are translations of unreviewed English drafts. A Slovak
+  provider's terms of business should be drafted in Slovak by a Slovak advocate,
+  and the English derived from that — the reverse of what exists here.
+- `hreflang` alternates are not emitted; the site is `noindex` while it is a
+  preview, so nothing reads them yet.

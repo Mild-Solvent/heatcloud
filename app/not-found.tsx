@@ -1,20 +1,35 @@
-import { Button, Container, SectionHead } from '@/components/ui';
+import './globals.css';
+import { Logo } from '@/components/icons';
+import { en } from '@/content/i18n/en';
+import { sk } from '@/content/i18n/sk';
+import { BASE } from '@/lib/base';
+import { fontClass } from '@/lib/fonts';
 
-export default function NotFound() {
+// The static 404.html a web server serves for any path it does not have. It
+// cannot know which language the visitor wanted, so it says it in both.
+export default function GlobalNotFound() {
   return (
-    <Container className="py-24 sm:py-32">
-      <div className="mx-auto max-w-xl text-center">
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-ember-600">404</p>
-        <SectionHead
-          title="That page is not here"
-          lede="The link is wrong, or the page moved while this preview was being built. Both are possible."
-          center
-        />
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Button href="/">Back to the home page</Button>
-          <Button href="/products/" variant="secondary">All products</Button>
-        </div>
+    <main className={`${fontClass} flex min-h-screen items-center justify-center bg-paper p-8 font-sans text-ink`}>
+      <div className="max-w-xl">
+        <Logo className="h-9 w-9 text-ink" />
+        <p className="mt-6 font-mono text-[0.7rem] uppercase tracking-[0.12em] text-ink-muted">404</p>
+        {[
+          ['sk', sk.notFound, sk.common.home],
+          ['en', en.notFound, en.common.home],
+        ].map(([l, t, home]) => {
+          const nf = t as typeof en.notFound;
+          return (
+            <section key={l as string} lang={l as string} className="mt-6 border-t border-line pt-5">
+              <h1 className="font-display text-[1.7rem] leading-tight">{nf.title}</h1>
+              <p className="mt-2 text-[0.93rem] leading-relaxed text-ink-muted">{nf.lede}</p>
+              <p className="mt-3">
+                <a href={`${BASE}/${l}/`} className="text-[0.9rem] text-water-600 underline underline-offset-4">{nf.home}</a>
+                <span className="sr-only">{home as string}</span>
+              </p>
+            </section>
+          );
+        })}
       </div>
-    </Container>
+    </main>
   );
 }

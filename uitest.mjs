@@ -25,13 +25,23 @@ async function newPage(width = 1440, height = 900) {
   return { ctx, page };
 }
 
-// ---------------------------------------------------------------- home + nav
+// ------------------------------------------------------------ root redirect
 {
   const { ctx, page } = await newPage();
   await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  ok('root redirects into a language', /\/(sk|en)\/$/.test(page.url()), page.url());
+  await ctx.close();
+}
+
+// ---------------------------------------------------------------- home + nav
+{
+  const { ctx, page } = await newPage();
+  await page.goto(`${BASE}/en/`, { waitUntil: 'networkidle' });
   await page.screenshot({ path: `${SHOTS}01-home.png`, fullPage: false });
 
   ok('home h1 renders', (await page.locator('h1').first().innerText()).includes('heats Slovak towns'));
+  ok('html lang follows the route', (await page.getAttribute('html', 'lang')) === 'en');
 
   // Mega menu
   await page.getByRole('button', { name: /^Products/ }).click();
@@ -43,16 +53,20 @@ async function newPage(width = 1440, height = 900) {
   await page.waitForTimeout(200);
   ok('Escape closes the mega-menu', !(await page.locator('text=All products').isVisible()));
 
-  await page.evaluate(() => window.scrollTo(0, 900));
-  await page.waitForTimeout(300);
-  await page.screenshot({ path: `${SHOTS}03-home-products.png` });
+  // Language switch keeps the page
+  await page.goto(`${BASE}/en/pricing/`, { waitUntil: 'networkidle' });
+  await page.locator('header a[hreflang="sk"]').click();
+  await page.waitForLoadState('networkidle');
+  ok('language switch lands on the same page in Slovak', page.url().endsWith('/sk/pricing/'), page.url());
+  ok('Slovak page is in Slovak', (await page.locator('h1').first().innerText()).includes('cena'));
+  await page.screenshot({ path: `${SHOTS}03-pricing-sk.png` });
   await ctx.close();
 }
 
 // -------------------------------------------------------------- business model
 {
   const { ctx, page } = await newPage();
-  await page.goto(`${BASE}/business/`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/en/business/`, { waitUntil: 'networkidle' });
   await page.locator('text=Assumptions').first().scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${SHOTS}04-business-model.png` });
@@ -86,7 +100,7 @@ async function newPage(width = 1440, height = 900) {
 // -------------------------------------------------------------------- console
 {
   const { ctx, page } = await newPage();
-  await page.goto(`${BASE}/console/`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/en/console/`, { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: 'Heat contribution' }).click();
   await page.waitForTimeout(300);
   ok('console heat tab reveals the heat panel', await page.locator('text=heated about 20 flats').isVisible());
@@ -104,7 +118,7 @@ async function newPage(width = 1440, height = 900) {
 // -------------------------------------------------------------------- pricing
 {
   const { ctx, page } = await newPage();
-  await page.goto(`${BASE}/pricing/`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/en/pricing/`, { waitUntil: 'networkidle' });
   await page.locator('table').first().scrollIntoViewIfNeeded();
   await page.waitForTimeout(300);
 
@@ -126,7 +140,7 @@ async function newPage(width = 1440, height = 900) {
 // ------------------------------------------------------------- product + legal
 {
   const { ctx, page } = await newPage();
-  await page.goto(`${BASE}/products/gpu-cloud/`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/en/products/gpu-cloud/`, { waitUntil: 'networkidle' });
   await page.screenshot({ path: `${SHOTS}09-product-gpu.png` });
   ok('product page shows plans', (await page.locator('text=H200 ×8').count()) > 0);
 
@@ -135,7 +149,7 @@ async function newPage(width = 1440, height = 900) {
   await page.waitForTimeout(200);
   ok('FAQ accordion opens', await faq.evaluate((el) => el.hasAttribute('open')));
 
-  await page.goto(`${BASE}/legal/terms/`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/en/legal/terms/`, { waitUntil: 'networkidle' });
   await page.screenshot({ path: `${SHOTS}10-legal-terms.png` });
   const secs = await page.locator('h2').count();
   ok('terms document renders its sections', secs >= 19, `${secs} headings`);
@@ -144,13 +158,18 @@ async function newPage(width = 1440, height = 900) {
   await page.locator('nav[aria-label="Contents"] a').nth(5).click();
   await page.waitForTimeout(400);
   ok('table-of-contents anchors resolve', page.url().includes('#'), page.url().split('/').pop());
+
+  // Cross-references inside the authored legal HTML must stay in the language.
+  await page.goto(`${BASE}/sk/legal/terms/`, { waitUntil: 'networkidle' });
+  const href = await page.locator('.prose-doc a[href*="/legal/aup/"]').first().getAttribute('href');
+  ok('legal cross-links carry the locale', href !== null && href.includes('/sk/legal/aup/'), href ?? 'none');
   await ctx.close();
 }
 
 // --------------------------------------------------------------------- mobile
 {
   const { ctx, page } = await newPage(390, 844);
-  await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/en/`, { waitUntil: 'networkidle' });
   await page.screenshot({ path: `${SHOTS}11-mobile-home.png` });
   const hScroll = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   ok('mobile home does not scroll horizontally', !hScroll);
@@ -161,7 +180,7 @@ async function newPage(width = 1440, height = 900) {
   await page.screenshot({ path: `${SHOTS}12-mobile-menu.png` });
   await page.keyboard.press('Escape');
 
-  await page.goto(`${BASE}/business/`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/en/business/`, { waitUntil: 'networkidle' });
   const hScroll2 = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   ok('mobile business page does not scroll horizontally', !hScroll2);
   await page.screenshot({ path: `${SHOTS}13-mobile-business.png`, fullPage: false });
@@ -170,14 +189,15 @@ async function newPage(width = 1440, height = 900) {
 
 // ------------------------------------------- responsive sweep of every route
 {
-  const ROUTES = [
+  const PATHS = [
     '/', '/products/', '/pricing/', '/business/', '/console/', '/heat/',
-    '/datacenters/', '/about/', '/support/', '/contact/', '/legal/',
+    '/datacenters/', '/about/', '/support/', '/contact/', '/legal/', '/investors/',
     ...['cloud-servers','public-cloud','kubernetes','gpu-cloud','object-storage','databases',
         'backup','web-hosting','domains','streaming','hsuite','hmail','hdrive','heat-offtake']
       .map((s) => `/products/${s}/`),
     ...['terms','aup','sla','privacy','dpa','cookies','imprint'].map((d) => `/legal/${d}/`),
   ];
+  const ROUTES = ['sk', 'en'].flatMap((l) => PATHS.map((p) => `/${l}${p}`));
   for (const [w, h, name] of [[390, 844, 'mobile'], [768, 1024, 'tablet'], [1440, 900, 'desktop']]) {
     const { ctx, page } = await newPage(w, h);
     const bad = [];

@@ -3,3 +3,5 @@ node_modules/
 out/
 shots/
 next-env.d.ts
+tsconfig.tsbuildinfo
+.claude/launch.json

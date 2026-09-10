@@ -44,6 +44,8 @@ jobs:
       - name: Check the export actually came out
         run: |
           test -f out/index.html
+          test -f out/sk/index.html
+          test -f out/en/index.html
           test -f out/.nojekyll
           test -f out/404.html
           echo "pages: $(find out -name index.html | wc -l)"
