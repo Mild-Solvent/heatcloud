@@ -1,11 +1,38 @@
-# HeatCloud Slovakia — product site
+# HEATCLOUDE LANDING
+
+Private working repository for the **HeatCloud Slovakia landing page and investor pitch**. Slovak and English, an animated 16-slide presentation, and a responsive Next.js site about cloud infrastructure with local waste-heat recovery.
+
+The pitch presents an investment concept: validate customers, prepare a 250–300 kW pilot, find a suitable site and obtain supplier quotes before committing to construction. Budgets and revenue scenarios are planning assumptions, not secured funding or supplier offers.
+
+## Start here
+
+```sh
+npm ci
+npm run dev
+```
+
+- Landing: http://localhost:8431/sk/
+- Investor pitch: http://localhost:8431/sk/investors/
+- English pitch: http://localhost:8431/en/investors/
+- Controls: arrows to navigate, O for slide overview, F for fullscreen; direct slide links use `#1` through `#16`.
+- Verification: `npm run typecheck` and `npm run build`.
+
+Current pitch content: `components/deck/PitchSlides.tsx`; design: `components/deck/pitch.css`; navigation: `components/deck/Deck.tsx`. Landing content lives in `content/landing.ts` and `components/InvestorLanding.tsx`.
+
+Read the [Kaskáda claim review](docs/kaskada-review-2026-09-13.md) for checked sources, identified errors and the changes adopted into the pitch. The older business calculator and legal drafts below have not been validated as investment or legal advice by that review.
+
+Repository visibility is private. GitHub Pages is manual only; pushing code does not publish the website. The original source project is [Mild-Solvent/heatcloud](https://github.com/Mild-Solvent/heatcloud). Historical implementation notes follow; the pitch module described above supersedes the original deck.
+
+---
+
+## Original project notes
 
 The commercial site for **HeatCloud Slovakia**: a cloud provider whose data
 centres sell their waste heat into Slovak district heating networks. Service
 catalogue, pricing, legal documents, and an interactive model of how the
 business works — in Slovak and in English.
 
-**Live: https://mild-solvent.github.io/heatcloud/**
+**Original upstream preview: https://mild-solvent.github.io/heatcloud/**
 
 > **This is a preview.** The company is in formation and not incorporated. No
 > service is operating, nothing can be ordered, there is no backend, and the
@@ -114,8 +141,8 @@ network access once, to fetch the fonts.
 
 ## Deploying
 
-**GitHub Pages** happens automatically: `.github/workflows/pages.yml` builds on
-every push to `main` and publishes `out/`. The base path comes from
+**GitHub Pages** is manual: `.github/workflows/pages.yml` only runs when explicitly
+dispatched after Pages has been configured. The base path comes from
 `actions/configure-pages`, so it follows the repository name.
 
 **Anywhere else** — `deploy.sh` builds a Docker image that serves the same export

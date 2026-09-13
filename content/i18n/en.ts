@@ -300,6 +300,12 @@ export const en = {
     title: 'Two revenue lines on one electricity bill.',
     lede: 'A datacenter buys electricity once and can sell the result twice — as compute to customers, and as heat to a district network. This page is the whole argument, with the numbers exposed so you can disagree with them precisely.',
     jump: 'Jump to the model',
+    deckCta: 'Investor presentation',
+    deckEyebrow: 'For investors',
+    deckTitle: 'The whole argument in sixteen slides.',
+    deckLede: 'The model, the precedents abroad, what a town gets, the financing, the plan and the risks — as a full-screen presentation driven by the arrow keys. The same numbers as on this page.',
+    deckOpen: 'Open the presentation',
+    deckHint: '16 slides · SK / EN · arrow keys or space',
     shapeEyebrow: 'The shape',
     shapeTitle: 'Where the two revenue lines come from',
     shape: [

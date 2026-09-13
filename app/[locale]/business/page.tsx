@@ -31,6 +31,7 @@ export default async function BusinessPage({ params }: { params: Params }) {
       <PageHead eyebrow={t.eyebrow} title={t.title} lede={t.lede}>
         <div className="flex flex-wrap items-center gap-x-7 gap-y-3">
           <Button href="#model">{t.jump}</Button>
+          <Button href="/investors/" variant="secondary">{t.deckCta}</Button>
           <Button href={site.dossier} variant="ghost" arrow>{d.common.readResearch}</Button>
         </div>
       </PageHead>
@@ -88,6 +89,17 @@ export default async function BusinessPage({ params }: { params: Params }) {
         </div>
         <div className="mt-12">
           <RuleGrid items={t.risks} cols={2} dark />
+        </div>
+      </Section>
+
+      {/* ------------------------------------------------------- the deck */}
+      <Section rule>
+        <div className="grid gap-x-12 gap-y-8 lg:grid-cols-[1.4fr_1fr] lg:items-center">
+          <SectionHead eyebrow={t.deckEyebrow} title={t.deckTitle} lede={t.deckLede} />
+          <div className="flex flex-col items-start gap-4 lg:items-end">
+            <Button href="/investors/" size="lg">{t.deckOpen}</Button>
+            <span className="font-mono text-label uppercase text-ink-faint">{t.deckHint}</span>
+          </div>
         </div>
       </Section>
 

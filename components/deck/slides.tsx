@@ -7,7 +7,6 @@ import type { Dict } from '@/content/i18n';
 import type { Locale } from '@/lib/i18n';
 import type { DeckSlide } from './Deck';
 import DeckImage from './DeckImage';
-import EuropeMap from './EuropeMap';
 
 /**
  * The sixteen slides. Everything that rises in is marked `.s` with its
@@ -79,6 +78,49 @@ function Photo({ src, position }: { src: string; position: string }) {
       position={position}
       className="s-photo absolute inset-0 h-full w-full object-cover"
     />
+  );
+}
+
+/**
+ * Ten years of practice on one line: a dot per scheme at the year it began
+ * delivering heat, HeatCloud's pilot at the end. Two schemes share 2023, so
+ * a second label at the same year moves up a tier.
+ */
+function Timeline({
+  cases, label, hereLabel, i,
+}: {
+  cases: readonly { city: string; year: number }[]; label: string; hereLabel: string; i: number;
+}) {
+  const from = 2015.4;
+  const to = 2027.2;
+  const pct = (y: number) => `${((y - from) / (to - from)) * 100}%`;
+  const seen = new Map<number, number>();
+  return (
+    <div className="s mt-9" style={st(i)}>
+      <p className="deck-mono-accent">{label}</p>
+      <div className="relative mt-10 h-12">
+        <div className="absolute inset-x-0 top-1/2 h-px bg-paper/25" aria-hidden="true" />
+        {[2016, 2018, 2020, 2022, 2024, 2026].map((y) => (
+          <span key={y} className="absolute top-[calc(50%+9px)] -translate-x-1/2 font-mono text-[0.6rem] text-paper/35" style={{ left: pct(y) }}>{y}</span>
+        ))}
+        {cases.map((c) => {
+          const tier = seen.get(c.year) ?? 0;
+          seen.set(c.year, tier + 1);
+          return (
+            <span key={c.city} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: pct(c.year) }}>
+              <span className="block h-2.5 w-2.5 rounded-full bg-water-400 ring-2 ring-night-950" />
+              <span className={`absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap font-mono text-[0.6rem] text-paper/70 sm:block ${tier ? 'bottom-[27px]' : 'bottom-[13px]'}`}>
+                {c.city}
+              </span>
+            </span>
+          );
+        })}
+        <span className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: pct(2026.8) }}>
+          <span className="block h-3 w-3 rounded-full bg-heat-500 ring-2 ring-night-950" />
+          <span className="absolute bottom-[14px] right-0 whitespace-nowrap font-mono text-[0.6rem] text-heat-400">{hereLabel}</span>
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -182,28 +224,32 @@ export function buildSlides(locale: Locale, d: Dict): DeckSlide[] {
           </div>
           <Lede className="!mt-0 lg:pb-1">{t.world.lede}</Lede>
         </div>
-        <div className="mt-6 grid gap-x-10 gap-y-8 lg:grid-cols-[1.15fr_1fr] lg:items-start">
-          <div>
-            <div className="s rounded-md border border-paper/10 bg-night-900 p-2" style={st(3)}>
-              <EuropeMap points={t.world.cases} here={t.world.here} hereNote={t.world.hereNote} />
+        <ol className="mt-8 grid gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+          {t.world.cases.map((c, k) => (
+            <li key={c.city} className="s deck-rule pt-3.5" style={st(3 + k)}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-mono text-[0.64rem] uppercase tracking-[0.12em] text-paper/70">{c.city}</span>
+                <span className="font-mono text-[0.62rem] text-paper/40">{c.year}</span>
+              </div>
+              <div className="deck-num mt-3 text-[clamp(1.6rem,2.6vw,2.4rem)] text-water-300">{c.key}</div>
+              <div className="mt-1 text-[0.8rem] leading-snug text-paper/85">{c.unit}</div>
+              <p className="mt-2 text-[0.74rem] leading-snug text-paper/55">
+                <span className="font-mono text-[0.62rem] text-water-300/80">{c.who}</span> · {c.fact}
+              </p>
+            </li>
+          ))}
+          <li className="s border-t border-heat-500 pt-3.5" style={st(10)}>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="font-mono text-[0.64rem] uppercase tracking-[0.12em] text-heat-400">{t.world.here}</span>
+              <span className="font-mono text-[0.62rem] text-heat-400/70">2026</span>
             </div>
-            <Foot i={11} className="!mt-4">{t.world.foot}</Foot>
-          </div>
-          <ol className="divide-y divide-paper/12">
-            {t.world.cases.map((c, k) => (
-              <li key={c.city} className="s grid grid-cols-[7rem_1fr] gap-4 py-2 text-[0.78rem] leading-snug" style={st(4 + k)}>
-                <div>
-                  <div className="font-medium text-paper">{c.city}</div>
-                  <div className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-paper/45">{c.country}</div>
-                </div>
-                <div>
-                  <span className="font-mono text-[0.64rem] text-water-300">{c.who}</span>
-                  <p className="mt-0.5 text-paper/70">{c.fact}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
+            <div className="deck-num mt-3 text-[clamp(1.6rem,2.6vw,2.4rem)] text-heat-400">{t.world.hereKey}</div>
+            <div className="mt-1 text-[0.8rem] leading-snug text-paper/85">{t.world.hereNote}</div>
+            <p className="mt-2 text-[0.74rem] leading-snug text-paper/55">{t.world.hereFact}</p>
+          </li>
+        </ol>
+        <Timeline cases={t.world.cases} label={t.world.timeline} hereLabel={t.world.timelineHere} i={11} />
+        <Foot i={12} className="!mt-5">{t.world.foot}</Foot>
       </Body>
     ),
   };

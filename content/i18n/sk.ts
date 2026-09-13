@@ -298,6 +298,12 @@ export const sk: Dict = {
     title: 'Dva riadky príjmov na jednej faktúre za elektrinu.',
     lede: 'Dátové centrum kúpi elektrinu raz a výsledok môže predať dvakrát — ako výpočtový výkon zákazníkom a ako teplo do siete CZT. Táto stránka je celý argument, s odkrytými číslami, aby ste s nimi mohli presne nesúhlasiť.',
     jump: 'Prejsť na model',
+    deckCta: 'Investorská prezentácia',
+    deckEyebrow: 'Pre investorov',
+    deckTitle: 'Celý argument v šestnástich snímkach.',
+    deckLede: 'Model, príklady zo sveta, čo z toho má mesto, financovanie, plán a riziká — ako prezentácia na celú obrazovku, ovládaná šípkami. Rovnaké čísla ako na tejto stránke.',
+    deckOpen: 'Otvoriť prezentáciu',
+    deckHint: '16 snímok · SK / EN · šípky alebo medzerník',
     shapeEyebrow: 'Podoba',
     shapeTitle: 'Odkiaľ pochádzajú dva riadky príjmov',
     shape: [

@@ -59,6 +59,33 @@ export default function Header({
       active ? 'after:opacity-100' : 'after:opacity-0'
     }`;
 
+  if (path === '/') {
+    const sk = locale === 'sk';
+    const links = [
+      ['#thesis', sk ? 'Projekt' : 'The project'],
+      ['#system', sk ? 'Technológia' : 'Technology'],
+      ['#economics', sk ? 'Ekonomika' : 'Economics'],
+      ['/investors/', sk ? 'Pre investorov' : 'For investors'],
+    ];
+    return (
+      <header className="il-header">
+        <div className="il-header-inner">
+          <Link href="/" className="il-brand" aria-label={t.home}>
+            <Logo className="h-10 w-10" />
+            <span>HeatCloud<small>Slovakia</small></span>
+          </Link>
+          <nav aria-label={sk ? 'Hlavná navigácia' : 'Main navigation'}>{links.map(([href, label]) => <Link key={href} href={href}>{label}</Link>)}</nav>
+          <div className="il-header-right">
+            <div className="il-languages" aria-label={t.language}><span>{localeShort[locale]}</span><span aria-hidden="true">/</span><NextLink href={swapLocale(pathname, other)} hrefLang={other} lang={other}>{localeShort[other]}</NextLink></div>
+            <Link href="/contact/" className="il-header-cta">{sk ? 'Porozprávajme sa' : 'Let’s talk'} <span aria-hidden="true">↗</span></Link>
+            <button type="button" className="il-menu-toggle" aria-label={t.menu} aria-expanded={mobile} aria-controls="landing-mobile-nav" onClick={() => setMobile(!mobile)}>{mobile ? '×' : '≡'}</button>
+          </div>
+        </div>
+        {mobile && <nav id="landing-mobile-nav" className="il-mobile-nav" aria-label={sk ? 'Mobilná navigácia' : 'Mobile navigation'}>{[...links, ['/contact/', t.contact], ['/products/', t.products]].map(([href, label]) => <Link key={href} href={href} onClick={() => setMobile(false)}>{label}</Link>)}</nav>}
+      </header>
+    );
+  }
+
   return (
     <header className="header-in sticky top-0 z-50 border-b border-line bg-paper/95 backdrop-blur-sm">
       <div ref={navRef} className="mx-auto w-full max-w-page px-5 sm:px-8">
