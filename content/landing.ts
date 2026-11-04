@@ -40,6 +40,7 @@ export const landing = {
       ['Vzduchové 25 °C, elektrina 160 €, plyn 40 €/MWh bez ceny CO₂', 'nikdy'],
     ],
     heatNote: 'Len tepelná časť, na syntetickej referenčnej sieti s 10 MW dátovým centrom. Ceny sú plánovacie odhady, nie tarify. Údržba nie je započítaná.',
+    heatLabTitle: 'Vyskúšajte model sami.', heatLabText: 'Ročný výpočet, simulátor s vypínaním komponentov, výmenník, tepelné čerpadlo, zásobník a test poruchy chladenia. Všetko interaktívne.', heatLabCta: 'Otvoriť tepelný model',
     roadmapLabel: '05 / CESTA K REALIZÁCII', roadmapTitle: 'Čo musí predchádzať\nprvému megawattu.', roadmapIntro: 'Každá etapa má konkrétnu podmienku pokračovania. Výstavba nasleduje až po overení technických a obchodných predpokladov.',
     roadmap: [
       ['01', 'Príprava', 'Lokalita a partneri', 'Overiť elektrickú kapacitu, pripojenie k tepelnej sieti a záujem odberateľov.'],
@@ -94,6 +95,7 @@ export const landing = {
       ['Air-cooled 25 °C, power €160, gas €40/MWh, no CO₂ price', 'never'],
     ],
     heatNote: 'Thermal part only, on a synthetic reference network with a 10 MW data centre. Prices are planning estimates, not tariffs. Maintenance is not included.',
+    heatLabTitle: 'Try the model yourself.', heatLabText: 'The annual run, a simulator with component switches, the exchanger, heat pump, storage and a cooling-failure test. All interactive.', heatLabCta: 'Open the heat model',
     roadmapLabel: '05 / PATH TO DELIVERY', roadmapTitle: 'Before the\nfirst megawatt.', roadmapIntro: 'Each stage has a clear condition for proceeding. Construction follows validation of the technical and commercial assumptions.',
     roadmap: [
       ['01', 'Development', 'Site and partners', 'Validate power capacity, district heating connectivity and customer interest.'],

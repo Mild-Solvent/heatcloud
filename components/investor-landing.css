@@ -138,3 +138,9 @@ body:has(.investor-landing) footer { background: #f1f2eb; border-color: #dce0d8;
 .il-heat-table td:last-child { font-size: 18px; letter-spacing: -.02em; }
 .il-heat-table .il-fine { margin-top: 14px; }
 @media (max-width: 600px) { .il-heat-table { margin-top: 34px; } .il-heat-table table { font-size: 13px; } .il-heat-table td:last-child { font-size: 15px; padding-left: 14px; } }
+.il-heat-cta { margin-top: 56px; display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 30px 34px; background: #263c31; color: #f8f8f4; border-radius: 4px; }
+.il-heat-cta h3 { color: #f8f8f4; }
+.il-heat-cta p { margin-top: 8px; color: #c9d3ca; font-size: 14px; line-height: 1.7; max-width: 560px; }
+.il-heat-cta .il-button { background: #bd501e; border-color: #bd501e; flex-shrink: 0; }
+.il-heat-cta .il-button:hover { background: #a34418; }
+@media (max-width: 600px) { .il-heat-cta { flex-direction: column; align-items: start; padding: 26px 22px; } }

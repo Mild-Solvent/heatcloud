@@ -1,0 +1,1020 @@
+<title>HeatCloud Heat Model</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky control rail on the left (the "plant room panel"), results flow on the right, summary before detail. */
+:root{
+  --bg:#f3f5f6; --panel:#ffffff; --ink:#132029; --ink-2:#47555f; --ink-3:#76838c; --line:#dbe1e5; --grid:#e9edf0;
+  --heat:#c2410c; --heat-soft:#fde8dc; --accent:#0f5f74; --accent-soft:#dcedf2;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --gas:#9aa4ab;
+  --good:#0f7b3f; --warn:#a85d00; --bad:#b42318;
+  --font-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f161b; --panel:#162129; --ink:#e8eef1; --ink-2:#b3c0c8; --ink-3:#83939d; --line:#283741; --grid:#1f2c35;
+  --heat:#f08a4b; --heat-soft:#3a2216; --accent:#5fb6cc; --accent-soft:#16323b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --gas:#5d6a73;
+  --good:#4cc38a; --warn:#e8a33d; --bad:#f97066; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161b; --panel:#162129; --ink:#e8eef1; --ink-2:#b3c0c8; --ink-3:#83939d; --line:#283741; --grid:#1f2c35;
+  --heat:#f08a4b; --heat-soft:#3a2216; --accent:#5fb6cc; --accent-soft:#16323b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --gas:#5d6a73;
+  --good:#4cc38a; --warn:#e8a33d; --bad:#f97066; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1360px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:24px}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--heat)}
+h1{font-family:var(--font-display);font-weight:800;font-size:clamp(28px,4vw,42px);line-height:1.05;margin:6px 0 8px;letter-spacing:-.01em;text-wrap:balance}
+.lede{color:var(--ink-2);max-width:68ch;margin:0}
+.lang{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.lang button{border:0;background:transparent;color:var(--ink-2);font:600 13px var(--font-mono);padding:8px 12px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:920px){.layout{grid-template-columns:minmax(0,1fr)}}
+aside.controls{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:16px;max-height:calc(100vh - 24px);overflow:auto}
+@media (max-width:920px){aside.controls{position:static;max-height:none}}
+.ctl-group{display:flex;flex-direction:column;gap:10px}
+.ctl-group h3{margin:0;font:600 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--ink-2)}
+.row{display:flex;justify-content:space-between;gap:8px}
+.row output{font-family:var(--font-mono);color:var(--ink);font-variant-numeric:tabular-nums}
+select,input[type=range]{width:100%}
+select{font:inherit;font-size:14px;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+input[type=range]{accent-color:var(--accent)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--ink-2);font:500 13px var(--font-body);padding:7px 6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tag{display:inline-block;font:500 10px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:var(--heat-soft);color:var(--heat);vertical-align:middle}
+main{display:flex;flex-direction:column;gap:20px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi .k{font-size:12px;color:var(--ink-3)}
+.kpi .v{font-family:var(--font-display);font-weight:700;font-size:clamp(22px,2.6vw,30px);font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi .v small{font:500 13px var(--font-mono);color:var(--ink-3);margin-left:4px}
+.kpi .d{font-size:12px;color:var(--ink-2);font-family:var(--font-mono)}
+.kpi.hl{border-color:var(--heat);background:linear-gradient(0deg,var(--panel),var(--panel)),var(--panel)}
+.pill{display:inline-flex;align-items:center;gap:4px;font:600 11px var(--font-mono);padding:2px 7px;border-radius:999px;width:max-content}
+.pill.good{color:var(--good);border:1px solid var(--good)}.pill.warn{color:var(--warn);border:1px solid var(--warn)}.pill.bad{color:var(--bad);border:1px solid var(--bad)}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 18px 14px;min-width:0}
+section.card h2{font-family:var(--font-display);font-weight:700;font-size:19px;margin:0 0 2px;text-wrap:balance}
+section.card p.sub{margin:0 0 12px;color:var(--ink-2);font-size:13.5px;max-width:80ch}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media (max-width:1100px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.chartbox{position:relative;height:280px;width:100%}
+.chartbox.tall{height:320px}.chartbox.short{height:170px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2);margin:0 0 8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.legend i.line{height:3px;border-radius:2px}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font:600 11px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+tr.sel td{background:var(--accent-soft)}
+tbody tr{cursor:pointer}
+.bar{display:inline-block;height:8px;border-radius:0 4px 4px 0;background:var(--accent);vertical-align:middle;margin-right:6px}
+.flow{display:flex;flex-direction:column;gap:14px}
+.flow .lbl{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2);margin-bottom:4px}
+.stack{display:flex;height:30px;border-radius:0 4px 4px 0;overflow:hidden;gap:2px;background:var(--panel)}
+.stack div{height:100%;min-width:0;transition:flex-basis .3s}
+.heat{display:grid;gap:2px;font:500 11.5px var(--font-mono);font-variant-numeric:tabular-nums}
+.heat .c{padding:7px 2px;text-align:center;border-radius:3px;color:var(--ink)}
+.heat .h{color:var(--ink-3);text-align:center;padding:6px 2px}
+.heat .c.me{outline:2px solid var(--heat);outline-offset:-2px}
+.notes{columns:2 320px;column-gap:28px;font-size:13.5px;color:var(--ink-2)}
+.notes p{margin:0 0 10px;break-inside:avoid}
+.notes b{color:var(--ink)}
+.weekctl{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:6px;font-size:13px;color:var(--ink-2)}
+.weekctl input{flex:1;min-width:160px}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font:12px var(--font-mono);padding:6px 8px;border-radius:6px;z-index:20}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 20px;overflow-x:auto}
+.tabs a{font:600 14px var(--font-body);color:var(--ink-2);text-decoration:none;padding:10px 14px;border-bottom:3px solid transparent;white-space:nowrap}
+.tabs a[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--heat)}
+.tabs a:hover{color:var(--ink)}
+.layout.full{grid-template-columns:minmax(0,1fr)}.layout.full aside{display:none}
+[hidden]{display:none!important}
+.view{display:flex;flex-direction:column;gap:20px;min-width:0}
+.cmp-head{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.cmp-no{font:700 12px var(--font-mono);width:24px;height:24px;border-radius:50%;display:inline-grid;place-items:center;background:var(--heat-soft);color:var(--heat);flex:none}
+.eq{margin-top:10px;font:13px var(--font-mono);color:var(--ink-2);background:var(--bg);border-radius:6px;padding:8px 10px;overflow-x:auto;white-space:nowrap}
+.heatcv{width:100%;height:230px;display:block;border-radius:4px;image-rendering:pixelated}
+.scale{display:flex;align-items:center;gap:8px;font:12px var(--font-mono);color:var(--ink-3);margin-top:6px}
+.scale i{flex:1;height:8px;border-radius:4px}
+svg text{font-family:var(--font-body)}
+.sch-node rect{fill:var(--panel);stroke:var(--ink-2);stroke-width:1.5}
+.sch-node.hot rect{stroke:var(--heat)}
+.sch-node.ext rect{stroke-dasharray:5 4}
+.sch-node text.t{fill:var(--ink);font-weight:600;font-size:14px}
+.sch-node text.s{fill:var(--ink-3);font-size:11.5px;font-family:var(--font-mono)}
+.sch-node:hover rect{fill:var(--accent-soft)}
+.sch-lbl{fill:var(--ink-2);font-size:12px;font-family:var(--font-mono)}
+.modes{display:grid;gap:8px}
+.modes .mrow{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr);gap:10px;align-items:center;font-size:13px}
+.modes .mbar{display:flex;height:22px;gap:2px}
+.modes .mbar div{height:100%}
+.simctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 20px;margin-bottom:12px}
+.simctl.two{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+label.chips{display:flex;flex-wrap:wrap;gap:6px}.chips label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;color:var(--ink-2)}.chips label:has(input:checked){border-color:var(--bad);color:var(--bad)}
+label.chk{flex-direction:row;align-items:center;gap:8px}
+.verdict{font-size:14px;margin:4px 0 10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+td.tw{white-space:normal;text-align:left;min-width:180px}
+.simgrid{display:grid;grid-template-columns:290px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:1000px){.simgrid{grid-template-columns:minmax(0,1fr)}}
+.swbox{display:flex;flex-direction:column;gap:12px;background:var(--bg);border-radius:8px;padding:14px}
+.simmain{display:flex;flex-direction:column;gap:12px;min-width:0}
+h3.mini{margin:4px 0 0;font:600 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.sw{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 8px;font-size:13.5px;padding:6px 0;border-bottom:1px solid var(--line)}
+.sw .tg{display:grid;grid-template-columns:repeat(3,auto);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.sw .tg button{border:0;background:var(--panel);color:var(--ink-2);font:600 11px var(--font-mono);padding:5px 7px;cursor:pointer}
+.sw .tg button[aria-pressed="true"].on{background:var(--good);color:#fff}
+.sw .tg button[aria-pressed="true"].off{background:var(--bad);color:#fff}
+.sw .tg button[aria-pressed="true"].win{background:var(--warn);color:#fff}
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btn{font:600 13px var(--font-body);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:7px 12px;cursor:pointer}
+.btn.icon{width:38px;padding:7px 0}
+.player{display:flex;gap:10px;align-items:center}.player input{flex:1;min-width:0}
+.diag{background:var(--bg);border-radius:8px}
+.blk rect{fill:var(--panel);stroke:var(--ink-2);stroke-width:1.4}
+.blk.sub rect{stroke-width:2.2}
+.blk.dis rect{stroke:var(--bad);stroke-dasharray:5 4}
+.blk text{fill:var(--ink);font-size:12.5px}
+.blk text.ty{fill:var(--ink-3);font:11px var(--font-mono)}
+.wire{fill:none;stroke:var(--ink-3);stroke-width:1.3}
+.wv{font:11.5px var(--font-mono);fill:var(--accent)}
+.wn{font:11px var(--font-mono);fill:var(--ink-3)}
+.sfs rect{fill:var(--panel);stroke:var(--ink-2);stroke-width:1.5}
+.sfs.act rect{fill:var(--heat-soft);stroke:var(--heat);stroke-width:3}
+.sfs text{fill:var(--ink);font:12px var(--font-mono)}
+.sfs text.nm{font:700 13px var(--font-mono)}
+.sft{fill:none;stroke:var(--accent)}
+.sfl{font:11px var(--font-mono);fill:var(--accent)}
+footer{margin-top:24px;font-size:12.5px;color:var(--ink-3)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/*__SITE_CSS__*/
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div>
+    <div class="eyebrow" data-i="eyebrow">HeatCloud Slovakia · engineers' model, run live</div>
+    <h1 data-i="h1">Data-centre heat into a town's district heating</h1>
+    <p class="lede" data-i="lede">Every number on this page is recalculated in your browser from the annual model in Fenixcrowlite/datacenter-heat-reuse (annual-v2). The JavaScript port reproduces the repository's Python results to 13 decimal places. Change the assumptions on the left.</p>
+  </div>
+  <div class="lang" role="group" aria-label="Language"><button id="lang-en" aria-pressed="true">EN</button><button id="lang-sk" aria-pressed="false">SK</button></div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Views">
+  <a href="#model" id="t-model" role="tab" data-i="tab_model">Annual model</a>
+  <a href="#sim" id="t-sim" role="tab" data-i="tab_sim">Simulator &amp; switches</a>
+  <a href="#components" id="t-components" role="tab" data-i="tab_comp">Components</a>
+  <a href="#build" id="t-build" role="tab" data-i="tab_build">Construction &amp; safety</a>
+</nav>
+<div class="layout" id="layout">
+<aside class="controls" aria-label="Assumptions">
+  <div class="ctl-group">
+    <h3 data-i="g_site">Site</h3>
+    <label class="f"><span data-i="weather">Weather year</span>
+      <select id="weather">
+        <option value="pz_T" data-i="w_pz">Partizánske · real typical year</option>
+        <option value="snv_T" data-i="w_snv">Spišská Nová Ves · real typical year</option>
+        <option value="syn_T" data-i="w_syn">Repository synthetic year</option>
+      </select></label>
+    <div class="f"><span data-i="size" style="font-size:13px;color:var(--ink-2)">Data-centre size</span>
+      <div class="seg" role="group"><button id="sz-big" aria-pressed="true" data-i="sz_big">10 MW (repo)</button><button id="sz-pilot" aria-pressed="false" data-i="sz_pilot">250 kW pilot</button></div></div>
+    <label class="f"><span data-i="scenario">Cooling / network scenario</span>
+      <select id="scenario"></select></label>
+  </div>
+  <div class="ctl-group">
+    <h3 data-i="g_plant">Plant</h3>
+    <label class="f"><span class="row"><span data-i="src">Waste-heat temperature</span><output id="o-src"></output></span><input type="range" id="src" min="20" max="65" step="1"></label>
+    <label class="f"><span class="row"><span data-i="rec">Heat recovered from IT</span><output id="o-rec"></output></span><input type="range" id="rec" min="0.3" max="1" step="0.01"></label>
+    <label class="f"><span class="row"><span data-i="hp">Heat-pump capacity</span><output id="o-hp"></output></span><input type="range" id="hp" min="1" max="20" step="0.5"></label>
+    <label class="f"><span class="row"><span data-i="sto">Thermal storage</span><output id="o-sto"></output></span><input type="range" id="sto" min="0" max="200" step="5"></label>
+    <div class="f"><span data-i="offs" style="font-size:13px;color:var(--ink-2)">Switch off</span>
+      <div class="chips"><label><input type="checkbox" id="off-rec"> <span data-i="off_rec">Heat recovery</span></label><label><input type="checkbox" id="off-hp"> <span data-i="off_hp">Heat pump</span></label><label><input type="checkbox" id="off-sto"> <span data-i="off_sto">Storage</span></label></div></div>
+    <label class="f"><span class="row"><span data-i="dem">Network heat demand</span><output id="o-dem"></output></span><input type="range" id="dem" min="0.25" max="3" step="0.05"></label>
+  </div>
+  <div class="ctl-group">
+    <h3 data-i="g_econ">Economics</h3>
+    <div class="seg" role="group"><button id="ec-repo" aria-pressed="true" data-i="ec_repo">Repo prices</button><button id="ec-stress" aria-pressed="false" data-i="ec_stress">Stress test</button></div>
+    <label class="f"><span class="row"><span data-i="el">Electricity</span><output id="o-el"></output></span><input type="range" id="el" min="50" max="250" step="5"></label>
+    <label class="f"><span class="row"><span data-i="gas">Gas (avoided)</span><output id="o-gas"></output></span><input type="range" id="gas" min="20" max="100" step="1"></label>
+    <label class="f"><span class="row"><span><span data-i="co2">CO₂ price on avoided gas</span> <span class="tag" data-i="added">added</span></span><output id="o-co2"></output></span><input type="range" id="co2" min="0" max="150" step="5"></label>
+    <label class="f"><span class="row"><span><span data-i="inst">Installed cost vs equipment</span> <span class="tag" data-i="added">added</span></span><output id="o-inst"></output></span><input type="range" id="inst" min="1" max="3" step="0.1"></label>
+    <label class="f"><span class="row"><span><span data-i="om">Yearly O&amp;M (% of capex)</span> <span class="tag" data-i="added">added</span></span><output id="o-om"></output></span><input type="range" id="om" min="0" max="5" step="0.5"></label>
+  </div>
+</aside>
+
+<main>
+<div id="v-model" class="view">
+  <div class="kpis" id="kpis"></div>
+
+  <section class="card">
+    <h2 data-i="flow_h">Where the heat goes in a year</h2>
+    <p class="sub" data-i="flow_p">Top bar: the data centre's IT heat and what the heat exchanger captures. Bottom bar: the town's heat demand and who supplies it.</p>
+    <div class="flow" id="flow"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2 data-i="mon_h">Monthly heat supply</h2>
+      <p class="sub" data-i="mon_p">Network heat by source. Summer demand is low, so the data centre covers it; winter needs the gas boiler.</p>
+      <div class="legend" id="lg-mon"></div>
+      <div class="chartbox"><canvas id="c-mon" role="img" aria-label="Monthly heat supply stacked bars"></canvas></div>
+    </section>
+    <section class="card">
+      <h2 data-i="ldc_h">Load duration curve</h2>
+      <p class="sub" data-i="ldc_p">All 8,760 hours sorted by network demand. The coloured area is what the data centre covers, the gap above it is gas.</p>
+      <div class="legend" id="lg-ldc"></div>
+      <div class="chartbox"><canvas id="c-ldc" role="img" aria-label="Load duration curve"></canvas></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2 data-i="wk_h">One week, hour by hour</h2>
+    <div class="weekctl"><span data-i="week">Week</span> <input type="range" id="wk" min="1" max="52" value="3" aria-label="Week of year"><output id="o-wk" style="font-family:var(--font-mono)"></output></div>
+    <div class="legend" id="lg-wk"></div>
+    <div class="chartbox tall"><canvas id="c-wk" role="img" aria-label="Hourly supply for one week"></canvas></div>
+    <div class="legend" id="lg-wk2" style="margin-top:10px"></div>
+    <div class="chartbox short"><canvas id="c-wk2" role="img" aria-label="Outdoor temperature for one week"></canvas></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2 data-i="cop_h">Heat-pump efficiency against weather</h2>
+      <p class="sub" data-i="cop_p">Colder days need hotter network water, which lowers the COP (heat out per unit of electricity in).</p>
+      <div class="chartbox"><canvas id="c-cop" role="img" aria-label="COP versus outdoor temperature"></canvas></div>
+    </section>
+    <section class="card">
+      <h2 data-i="hm_h">Payback across energy prices</h2>
+      <p class="sub" data-i="hm_p">Simple payback in years with the current plant and cost settings. The outlined cell is your current price pair.</p>
+      <div class="tbl-wrap"><div class="heat" id="heatmap"></div></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2 data-i="sc_h">The five scenarios from the repository, on your settings</h2>
+    <p class="sub" data-i="sc_p">Each row reruns the full year with that scenario's cooling and network temperatures, using the site, size and prices you picked. Click a row to load it.</p>
+    <div class="tbl-wrap"><table id="sc-table"></table></div>
+  </section>
+
+  <section class="card">
+    <h2 data-i="pool_h">Swimming-pool model (7 days, 15-minute steps)</h2>
+    <p class="sub" data-i="pool_p">The repository's second model: a 500 m³ pool, 200 kW heat pump and small storage, close to our 250 kW pilot size. These are precomputed Python runs of all eight original test cases.</p>
+    <div class="grid2">
+      <div class="tbl-wrap"><table id="pool-table"></table></div>
+      <div>
+        <label class="f" style="margin-bottom:8px"><span data-i="pool_case">Case shown</span><select id="pool-case"></select></label>
+        <div class="legend" id="lg-pool"></div>
+        <div class="chartbox"><canvas id="c-pool" role="img" aria-label="Pool model heat flows"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 data-i="n_h">How to read this</h2>
+    <div class="notes" id="notes"></div>
+  </section>
+</div>
+
+
+<div id="v-sim" class="view" hidden>
+  <section class="card">
+    <h2 data-i="sm_h">Pool plant simulator: switch components off and watch the controller react</h2>
+    <p class="sub" data-i="sm_p">The repository's closed-loop Simulink/Stateflow model v04 (500 m³ pool, 200 kW heat pump, small storage, district branch), rerun live in 15-minute steps for one week. Switch a component off for the whole week or only inside the fault window. The JavaScript port matches the repository's Python to 15 decimal places on all eight test cases.</p>
+    <div class="simgrid">
+      <div class="swbox">
+        <h3 class="mini" data-i="sm_sw">Components</h3>
+        <div id="switches"></div>
+        <label class="f"><span class="row"><span data-i="sm_win">Fault window</span><output id="o-fw"></output></span>
+          <span class="dual"><input type="range" id="fw0" min="0" max="168" step="1" value="72" aria-label="Fault window start"><input type="range" id="fw1" min="0" max="168" step="1" value="96" aria-label="Fault window end"></span></label>
+        <h3 class="mini" data-i="sm_case">Test case and limits</h3>
+        <label class="f"><select id="sm-case"></select></label>
+        <label class="f"><span class="row"><span data-i="sm_off">Source temperature shift</span><output id="o-so"></output></span><input type="range" id="so" min="-10" max="15" step="1" value="0"></label>
+        <label class="f"><span class="row"><span data-i="sm_hp">Heat-pump thermal limit</span><output id="o-sh"></output></span><input type="range" id="sh" min="0" max="400" step="10" value="200"></label>
+        <label class="f"><span class="row"><span data-i="sm_pl">Pool exchanger limit</span><output id="o-sp"></output></span><input type="range" id="sp" min="0" max="300" step="10" value="150"></label>
+        <label class="f"><span class="row"><span data-i="sm_vol">Pool volume</span><output id="o-sv"></output></span><input type="range" id="sv" min="200" max="1500" step="50" value="500"></label>
+        <button class="btn" id="sm-reset" data-i="sm_reset">Reset all</button>
+      </div>
+      <div class="simmain">
+        <div class="kpis" id="sm-kpis"></div>
+        <div class="player"><button class="btn icon" id="sm-play" aria-label="Play">▶</button><input type="range" id="sm-t" min="0" max="671" value="300" aria-label="Simulation time"><output id="o-st" style="font-family:var(--font-mono);min-width:150px"></output></div>
+        <h3 class="mini" data-i="sm_slx">Simulink diagram · top level · live signal values</h3>
+        <div class="tbl-wrap diag"><svg id="slx" viewBox="0 0 1340 390" style="width:100%;min-width:760px;height:auto" role="img" aria-label="Simulink block diagram"></svg></div>
+        <h3 class="mini" data-i="sm_sf">Stateflow chart · Dispecer_Stateflow · active mode and transitions taken this week</h3>
+        <div class="tbl-wrap diag"><svg id="sf" viewBox="0 120 940 500" style="width:100%;min-width:620px;height:auto" role="img" aria-label="Stateflow chart"></svg></div>
+      </div>
+    </div>
+  </section>
+  <section class="card">
+    <h2 data-i="sm_th">The week, step by step</h2>
+    <div class="legend" id="lg-sm"></div>
+    <div class="chartbox"><canvas id="c-sm" role="img" aria-label="Heat flows over the week"></canvas></div>
+    <div class="legend" id="lg-sm2" style="margin-top:10px"></div>
+    <div class="chartbox short"><canvas id="c-sm2" role="img" aria-label="Pool temperature and mode over the week"></canvas></div>
+  </section>
+</div>
+
+<div id="v-components" class="view" hidden>
+  <section class="card">
+    <h2 data-i="sys_h">The plant, end to end</h2>
+    <p class="sub" data-i="sys_p">Schematic of the repository's system with this year's energy on each line, from the scenario and site chosen on the left. Hover a component for its role and the equation the model uses.</p>
+    <div class="tbl-wrap"><svg id="schem" viewBox="0 0 980 400" style="width:100%;min-width:680px;height:auto" role="img" aria-label="Plant schematic"></svg></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <div class="cmp-head"><span class="cmp-no">1</span><h2 data-i="c1_h">Data centre: the heat source</h2></div>
+      <p class="sub" data-i="c1_p">IT power for every hour of the year (rows are days, columns are hours). All of it ends up as heat; the recovered share goes to the heat exchanger.</p>
+      <canvas id="it-heat" class="heatcv" role="img" aria-label="IT load by day and hour"></canvas>
+      <div class="scale" id="it-scale"></div>
+      <div class="eq">Q<sub>source</sub> = P<sub>IT</sub> × recovery &nbsp;·&nbsp; P<sub>DC</sub> = P<sub>IT</sub> × PUE</div>
+    </section>
+    <section class="card">
+      <div class="cmp-head"><span class="cmp-no">2</span><h2 data-i="c2_h">Heat exchanger: crossing between loops</h2></div>
+      <p class="sub" data-i="c2_p">Keeps server coolant separate from the heat-pump circuit. It passes 97 % of the recovered heat up to its rating and costs 3 K of temperature.</p>
+      <svg id="hx-svg" viewBox="0 0 520 230" style="width:100%;height:auto" role="img" aria-label="Heat exchanger temperatures"></svg>
+      <div class="eq">Q<sub>HX</sub> = min(ε·Q<sub>source</sub>, Q<sub>HX,max</sub>) &nbsp;·&nbsp; T<sub>evap</sub> = T<sub>source</sub> − ΔT<sub>approach</sub></div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="card">
+      <div class="cmp-head"><span class="cmp-no">3</span><h2 data-i="c3_h">Heat pump: lifting the temperature</h2></div>
+      <p class="sub" data-i="c3_p">COP from 45 % of the Carnot limit for each source temperature, against network supply temperature. Dots are certified Carrier points (Eurovent, 10 °C source) the repository used as a check.</p>
+      <div class="legend" id="lg-cop2"></div>
+      <div class="chartbox"><canvas id="c-cop2" role="img" aria-label="COP map"></canvas></div>
+      <div class="eq">COP = 0.45 · T<sub>sink</sub> / (T<sub>sink</sub> − T<sub>evap</sub>), 2.2…7 &nbsp;·&nbsp; Q<sub>out</sub> = Q<sub>HX</sub> · COP / (COP − 1)</div>
+    </section>
+    <section class="card">
+      <div class="cmp-head"><span class="cmp-no">4</span><h2 data-i="c4_h">District network: weather compensation</h2></div>
+      <p class="sub" data-i="c4_p">Colder days raise both the town's demand and the water temperature the heat pump must reach. Shaded band: the outdoor temperatures this site actually sees.</p>
+      <div class="legend" id="lg-net"></div>
+      <div class="chartbox"><canvas id="c-net" role="img" aria-label="Network temperature and demand versus outdoor temperature"></canvas></div>
+      <div class="eq">f = clamp((16 − T<sub>out</sub>)/28, 0, 1) &nbsp;·&nbsp; T<sub>supply</sub> = 55 + 25f &nbsp;·&nbsp; demand = (2 + 18f′)/0.94 MW</div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="card">
+      <div class="cmp-head"><span class="cmp-no">5</span><h2 data-i="c5_h">Thermal storage: shifting heat in time</h2></div>
+      <p class="sub" id="sto-sub" data-i="c5_p">Daily range of stored energy through the year. It charges when the heat pump makes more than the town needs and discharges when it falls short.</p>
+      <div class="chartbox"><canvas id="c-sto" role="img" aria-label="Storage level through the year"></canvas></div>
+      <div class="eq">E<sub>t+1</sub> = E<sub>t</sub>(1 − 10⁻⁴) + 0.95·Q<sub>charge</sub> − Q<sub>discharge</sub>/0.95 &nbsp;·&nbsp; ±5 MW limits</div>
+    </section>
+    <section class="card">
+      <div class="cmp-head"><span class="cmp-no">6</span><h2 data-i="c6_h">Swimming pool: where its heat goes</h2></div>
+      <p class="sub" data-i="c6_p">Heat loss of the 500 m³ pool at 27.5 °C water in a 29 °C hall, from the pool model's own loss equations. The cover mainly cuts evaporation.</p>
+      <div class="legend" id="lg-pl"></div>
+      <div class="chartbox"><canvas id="c-pl" role="img" aria-label="Pool heat loss breakdown"></canvas></div>
+      <div class="eq">ΔT = (Q<sub>in</sub> − Q<sub>loss</sub>)·Δt / (ρ·V·c<sub>p</sub>) &nbsp;·&nbsp; thermostat 27.35 ↔ 27.65 °C</div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="cmp-head"><span class="cmp-no">7</span><h2 data-i="c7_h">Controller: which mode the pool plant is in</h2></div>
+    <p class="sub" data-i="c7_p">The pool model's Stateflow chart picks one of five modes every 15 minutes. Bars show hours spent in each mode over the 7-day test, for every original test case.</p>
+    <div class="modes" id="modes"></div>
+  </section>
+</div>
+
+<div id="v-build" class="view" hidden>
+  <section class="card">
+    <h2 data-i="eq_h">Equipment the engineers specified</h2>
+    <p class="sub" data-i="eq_p">From the repository's equipment-selection and engineering-release work (23 Oct 2026). None of it is a vendor quotation yet; the status column says what is still missing.</p>
+    <div class="tbl-wrap"><table id="eq-table"></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2 data-i="hp_h">How many heat-pump modules?</h2>
+      <p class="sub" data-i="hp_p">Extra gas the network burns per year when heat-pump output is capped. Above 10 MW almost nothing is gained; the engineers chose 6 + 1 spare Carrier 61XWH-ZE17 units (9.42 MW nominal).</p>
+      <div class="chartbox"><canvas id="c-mod" role="img" aria-label="Extra gas versus heat pump capacity"></canvas></div>
+    </section>
+    <section class="card">
+      <h2 data-i="ce_h">Pool heat exchanger: what it is worth</h2>
+      <p class="sub" data-i="ce_p">20-year NPV at 6 % for the direct 150 kW pool exchanger, against the installed cost. It pays off only if installed for under about €103k.</p>
+      <div class="chartbox"><canvas id="c-npv" role="img" aria-label="NPV versus installed cost"></canvas></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2 data-i="cs_h">If nobody takes the heat: IT cooling fault simulator</h2>
+    <p class="sub" data-i="cs_p">The data centre must reject all 10 MW on its own dry coolers when the pool and town take nothing. One cooler fails at minute 10 and a spare starts after a delay. Coolant above 40 °C trips the servers. This is the repository's Simulink fault model, rerun live; it reproduces their six saved cases exactly.</p>
+    <div class="simctl">
+      <label class="f"><span class="row"><span data-i="cs_units">Cooler modules installed (2 MW each)</span><output id="o-cu"></output></span><input type="range" id="cu" min="5" max="9" step="1" value="7"></label>
+      <label class="f"><span class="row"><span data-i="cs_der">Summer derating</span><output id="o-cd"></output></span><input type="range" id="cd" min="0" max="0.3" step="0.05" value="0.1"></label>
+      <label class="f"><span class="row"><span data-i="cs_dur">Spare start delay</span><output id="o-cs"></output></span><input type="range" id="cs" min="0" max="600" step="10" value="30"></label>
+      <label class="f"><span class="row"><span data-i="cs_buf">Coolant buffer tank</span><output id="o-cb"></output></span><input type="range" id="cb" min="2" max="60" step="1" value="10"></label>
+      <label class="f chk"><input type="checkbox" id="cp"> <span data-i="cs_pump">Coolant pump also stops for 10 s</span></label>
+    </div>
+    <div id="cs-verdict" class="verdict"></div>
+    <div class="legend" id="lg-cs"></div>
+    <div class="chartbox"><canvas id="c-cs" role="img" aria-label="Coolant temperature during cooler failure"></canvas></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2 data-i="ps_h">Sizing the 250 kW pilot</h2>
+      <p class="sub" data-i="ps_p">The same formulas the engineers used for the 10 MW plant, applied to our pilot pod. Screening numbers for a first talk with a designer.</p>
+      <div class="simctl two">
+        <label class="f"><span class="row"><span data-i="ps_kw">IT heat</span><output id="o-pk"></output></span><input type="range" id="pk" min="50" max="1000" step="10" value="250"></label>
+        <label class="f"><span class="row"><span data-i="ps_dt">Coolant ΔT</span><output id="o-pd"></output></span><input type="range" id="pd" min="3" max="15" step="1" value="5"></label>
+        <label class="f"><span class="row"><span data-i="ps_v">Pipe velocity</span><output id="o-pv"></output></span><input type="range" id="pv" min="0.8" max="2.5" step="0.1" value="1.5"></label>
+        <label class="f"><span class="row"><span data-i="ps_ride">Ride-through on cooling loss</span><output id="o-pr"></output></span><input type="range" id="pr" min="10" max="600" step="10" value="60"></label>
+      </div>
+      <div class="tbl-wrap"><table id="ps-table"></table></div>
+    </section>
+    <section class="card">
+      <h2 data-i="hx_h">Pool exchanger sizing</h2>
+      <p class="sub" data-i="hx_p">Counter-flow plate exchanger, 150 kW into pool water returning at 27.5 °C and rising 2 K. Warmer source water means a smaller, cheaper exchanger; below about 32 °C it cannot work at all.</p>
+      <div class="chartbox"><canvas id="c-hx" role="img" aria-label="Exchanger area versus source temperature"></canvas></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2 data-i="fm_h">What can fail, and what is still unproven</h2>
+    <p class="sub" data-i="fm_p">The repository's failure-mode list. Every row is still physically unvalidated; P0 items block construction.</p>
+    <div class="tbl-wrap"><table id="fm-table"></table></div>
+  </section>
+</div>
+  <footer data-i="foot">Model: heat_reuse/annual.py (MATLAB simulate_system_v2 port), verified here: 74 repo tests pass, JS port within 3e-13 of Python for all five scenarios. Weather: PVGIS-ERA5 typical meteorological year (2005–2020). Data-centre load profile and town demand curve are the repository's synthetic ones.</footer>
+</main>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const D=__DATA__;
+__MODEL__
+const T={
+en:{},
+sk:{eyebrow:"HeatCloud Slovakia · model inžinierov, prepočítaný naživo",h1:"Teplo z dátového centra do mestského tepla",
+lede:"Každé číslo na tejto stránke sa prepočíta priamo v prehliadači z ročného modelu v Fenixcrowlite/datacenter-heat-reuse (annual-v2). JavaScriptový prepis dáva rovnaké výsledky ako Python v repozitári na 13 desatinných miest. Predpoklady meňte vľavo.",
+g_site:"Lokalita",weather:"Počasie",w_pz:"Partizánske · reálny typický rok",w_snv:"Spišská Nová Ves · reálny typický rok",w_syn:"Syntetický rok z repozitára",size:"Veľkosť dátového centra",sz_big:"10 MW (repo)",sz_pilot:"250 kW pilot",scenario:"Scenár chladenia / siete",
+g_plant:"Zariadenie",src:"Teplota odpadového tepla",rec:"Podiel tepla z IT, ktorý zachytíme",hp:"Výkon tepelného čerpadla",sto:"Zásobník tepla",dem:"Dopyt siete po teple",
+g_econ:"Ekonomika",ec_repo:"Ceny z repa",ec_stress:"Záťažový test",el:"Elektrina",gas:"Plyn (nahradený)",co2:"Cena CO₂ za ušetrený plyn",added:"doplnené",inst:"Inštalácia vs. cena zariadení",om:"Ročná údržba (% investície)",
+flow_h:"Kam ide teplo za rok",flow_p:"Horný pruh: teplo z IT a koľko z neho zachytí výmenník. Dolný pruh: dopyt mesta po teple a kto ho pokryje.",
+mon_h:"Dodávka tepla po mesiacoch",mon_p:"Teplo do siete podľa zdroja. V lete je dopyt nízky a dátové centrum ho pokryje, v zime musí pomôcť plynový kotol.",
+ldc_h:"Krivka trvania zaťaženia",ldc_p:"Všetkých 8 760 hodín zoradených podľa dopytu. Farebná plocha pokrýva dátové centrum, medzera nad ňou je plyn.",
+wk_h:"Jeden týždeň po hodinách",week:"Týždeň",cop_h:"Účinnosť tepelného čerpadla podľa počasia",cop_p:"V zime treba teplejšiu vodu v sieti, a to znižuje COP (teplo von na jednotku elektriny).",
+hm_h:"Návratnosť pri rôznych cenách energií",hm_p:"Jednoduchá návratnosť v rokoch pri aktuálnom zariadení a nákladoch. Orámovaná bunka sú vaše aktuálne ceny.",
+sc_h:"Päť scenárov z repozitára na vašich nastaveniach",sc_p:"Každý riadok prepočíta celý rok s chladením a teplotami siete daného scenára, s lokalitou, veľkosťou a cenami, ktoré ste zvolili. Kliknutím riadok načítate.",
+pool_h:"Model bazéna (7 dní, 15-minútový krok)",pool_p:"Druhý model z repozitára: bazén 500 m³, tepelné čerpadlo 200 kW a malý zásobník, veľkosťou blízko nášho 250 kW pilotu. Toto sú vopred prepočítané Python behy všetkých ôsmich pôvodných testovacích prípadov.",
+pool_case:"Zobrazený prípad",n_h:"Ako to čítať",
+foot:"Model: heat_reuse/annual.py (prepis MATLAB simulate_system_v2), overený tu: 74 testov repa prešlo, JS prepis do 3e-13 od Pythonu pre všetkých päť scenárov. Počasie: PVGIS-ERA5 typický meteorologický rok (2005–2020). Profil záťaže dátového centra a krivka dopytu mesta sú syntetické z repozitára."}
+};
+const L={
+en:{cov:"Network demand covered",heat:"Waste heat delivered",cop:"Mean heat-pump COP",elec:"Heat-pump electricity",save:"Net yearly saving",pay:"Simple payback",co2t:"CO₂ avoided",capex:"Investment",
+ of:"of",yr:"y",never:"never",perYr:"per year",lcoh:"LCOH",good:"Under 8 y",ok:"8–15 y",bad:"Over 15 y",
+ itHeat:"IT heat",captured:"Recovered via heat exchanger",notCap:"Not recovered",hpDirect:"Heat pump, direct",sto:"From storage",gasB:"Gas boiler",curt:"Heat-pump heat not needed",demand:"Network demand",
+ months:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],hours:"hours, sorted by demand",outT:"Outdoor °C",stoE:"Storage level",
+ scen:"Scenario",cover:"Coverage",payb:"Payback",save2:"Net saving / y",lcoh2:"LCOH €/MWh",
+ pcase:"Case",ppool:"Pool heat",pdh:"District heat",pun:"DH unmet",pel:"HP electricity",pT:"Pool °C",
+ poolT:"Pool temperature",dcAvail:"Data-centre heat available",dhDel:"Heat to district network",dhDem:"District demand",poolQ:"Heat to pool",day:"Day",
+ elec_ax:"Electricity €/MWh →",gas_ax:"Gas €/MWh ↓",
+ sc:{Air25_Fixed70:"Air-cooled 25 °C, fixed 70 °C network",Liquid35_Weather:"Liquid 35 °C, weather-compensated",Warm45_Weather:"Warm-water 45 °C, no storage",Warm45_Storage100:"Warm-water 45 °C + 100 MWh storage",Liquid35_LowTempDH:"Liquid 35 °C, low-temperature network"},
+ pool:{zaklad:"Base case",vypnuty_bazen:"Pool switched off",vypadok_IT_24h:"IT outage 24 h",nulovy_zdroj_24h:"Zero source 24 h",teplejsi_zdroj:"Warmer source",bez_plachty:"No pool cover",TES_vypnute:"Storage off",vysoky_dopyt_DH:"High district demand"},
+ notes:[
+ "<b>What the model does.</b> Each hour: IT power becomes heat, a share is recovered, a heat exchanger passes it to a heat pump, the heat pump lifts it to the network supply temperature (55–80 °C, weather-compensated), surplus goes to storage, and the gas boiler covers the rest.",
+ "<b>COP.</b> 45 % of Carnot, limited to 2.2–7, with a small part-load penalty. Warmer waste heat (liquid cooling at 45 °C) gives far better COP than air cooling at 25 °C.",
+ "<b>What is synthetic.</b> The data-centre load (about 8.2 MW average IT, 10 MW peak) and the town demand curve (2 to 21 MW, driven only by outdoor temperature) come from the repository. The Partizánske and Spišská Nová Ves options swap in real typical-year weather, which raises demand and slightly lowers COP compared with the mild synthetic year.",
+ "<b>250 kW pilot.</b> Scales the IT load to 250 kW average and sizes the heat pump and exchanger to match, without storage. It feeds a full town network, so coverage is small but every unit of heat is used.",
+ "<b>Economics in the repository</b> count equipment only (heat pump 650 €/kW, storage 35 €/kWh, exchanger 80 €/kW), no installation, no maintenance and no CO₂ price, with electricity at 100 and gas at 50 €/MWh. The three settings tagged <i>added</i> are ours, so you can stress-test that. The stress-test preset uses 160 €/MWh electricity, 40 €/MWh gas, 70 €/t CO₂, 1.8× installed cost and 2.5 % O&amp;M.",
+ "<b>Not modelled.</b> Grid fees, heat sale price agreements, ÚRSO licensing, compute revenue, pipe losses and the data centre's own cooling savings. Treat payback as a screening number, not an investment case."]},
+sk:{cov:"Pokrytie dopytu siete",heat:"Dodané odpadové teplo",cop:"Priemerný COP čerpadla",elec:"Elektrina pre čerpadlo",save:"Čistá ročná úspora",pay:"Jednoduchá návratnosť",co2t:"Ušetrené CO₂",capex:"Investícia",
+ of:"z",yr:"r",never:"nikdy",perYr:"ročne",lcoh:"LCOH",good:"Do 8 r",ok:"8–15 r",bad:"Nad 15 r",
+ itHeat:"Teplo z IT",captured:"Zachytené výmenníkom",notCap:"Nezachytené",hpDirect:"Čerpadlo, priamo",sto:"Zo zásobníka",gasB:"Plynový kotol",curt:"Nevyužité teplo čerpadla",demand:"Dopyt siete",
+ months:["Jan","Feb","Mar","Apr","Máj","Jún","Júl","Aug","Sep","Okt","Nov","Dec"],hours:"hodiny zoradené podľa dopytu",outT:"Vonku °C",stoE:"Stav zásobníka",
+ scen:"Scenár",cover:"Pokrytie",payb:"Návratnosť",save2:"Čistá úspora / r",lcoh2:"LCOH €/MWh",
+ pcase:"Prípad",ppool:"Teplo bazén",pdh:"Teplo do siete",pun:"Nepokryté",pel:"Elektrina TČ",pT:"Bazén °C",
+ poolT:"Teplota bazéna",dcAvail:"Dostupné teplo z DC",dhDel:"Teplo do siete",dhDem:"Dopyt siete",poolQ:"Teplo do bazéna",day:"Deň",
+ elec_ax:"Elektrina €/MWh →",gas_ax:"Plyn €/MWh ↓",
+ sc:{Air25_Fixed70:"Vzduch 25 °C, sieť fixne 70 °C",Liquid35_Weather:"Kvapalina 35 °C, ekvitermne",Warm45_Weather:"Teplá voda 45 °C, bez zásobníka",Warm45_Storage100:"Teplá voda 45 °C + zásobník 100 MWh",Liquid35_LowTempDH:"Kvapalina 35 °C, nízkoteplotná sieť"},
+ pool:{zaklad:"Základ",vypnuty_bazen:"Bazén vypnutý",vypadok_IT_24h:"Výpadok IT 24 h",nulovy_zdroj_24h:"Nulový zdroj 24 h",teplejsi_zdroj:"Teplejší zdroj",bez_plachty:"Bez plachty",TES_vypnute:"Zásobník vypnutý",vysoky_dopyt_DH:"Vysoký dopyt siete"},
+ notes:[
+ "<b>Čo model robí.</b> Každú hodinu: výkon IT sa zmení na teplo, časť sa zachytí, výmenník ho odovzdá tepelnému čerpadlu, to ho zdvihne na teplotu siete (55–80 °C podľa vonkajšej teploty), prebytok ide do zásobníka a zvyšok pokryje plynový kotol.",
+ "<b>COP.</b> 45 % Carnotovej účinnosti, obmedzené na 2,2–7, s malou penalizáciou pri čiastočnom zaťažení. Teplejšie odpadové teplo (kvapalinové chladenie 45 °C) dáva oveľa lepší COP ako vzduch 25 °C.",
+ "<b>Čo je syntetické.</b> Záťaž dátového centra (priemer cca 8,2 MW IT, špička 10 MW) a krivka dopytu mesta (2 až 21 MW, len podľa vonkajšej teploty) sú z repozitára. Voľby Partizánske a Spišská Nová Ves dosadia reálne počasie typického roka, čo zvýši dopyt a mierne zníži COP oproti miernemu syntetickému roku.",
+ "<b>Pilot 250 kW.</b> Zmenší záťaž IT na priemer 250 kW a primerane dimenzuje čerpadlo a výmenník, bez zásobníka. Napája celú mestskú sieť, takže pokrytie je malé, ale všetko teplo sa využije.",
+ "<b>Ekonomika v repozitári</b> počíta len zariadenia (čerpadlo 650 €/kW, zásobník 35 €/kWh, výmenník 80 €/kW), bez inštalácie, údržby a ceny CO₂, s elektrinou 100 a plynom 50 €/MWh. Tri nastavenia označené <i>doplnené</i> sú naše, aby sa to dalo preveriť. Záťažový test: elektrina 160 €/MWh, plyn 40 €/MWh, CO₂ 70 €/t, inštalácia 1,8× a údržba 2,5 %.",
+ "<b>Nie je v modeli.</b> Poplatky za sieť, zmluvná cena tepla, licencia ÚRSO, príjem z výpočtov, straty v potrubí a úspora chladenia dátového centra. Návratnosť berte ako orientačné číslo, nie investičný zámer."]}
+};
+let lang='en';
+const ORDER=['Air25_Fixed70','Liquid35_Weather','Warm45_Weather','Warm45_Storage100','Liquid35_LowTempDH'];
+const meanIT=D.IT.reduce((a,b)=>a+b,0)/D.IT.length;
+const IT_PILOT=D.IT.map(x=>x*0.25/meanIT);
+const S={weather:'pz_T',size:'big',scenario:'Warm45_Storage100',src:45,rec:.9,hp:12,sto:100,dem:1,el:100,gas:50,co2:0,inst:1,om:0,econ:'repo',week:3,pool:'zaklad'};
+try{const saved=JSON.parse(localStorage.getItem('hc-lang')||'null');if(saved==='sk'||saved==='en')lang=saved}catch(e){}
+/*__SITE_JS__*/
+const $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt=(v,d=0)=>v==null||!isFinite(v)?'–':v.toLocaleString(lang==='sk'?'sk-SK':'en-GB',{maximumFractionDigits:d,minimumFractionDigits:d});
+const fE=v=>Math.abs(v)>=1e6?fmt(v/1e6,2)+' M€':Math.abs(v)>=1e3?fmt(v/1e3,0)+' k€':fmt(v,0)+' €';
+const fMWh=v=>v>=1e4?[fmt(v/1e3,1),'GWh']:[fmt(v,0),'MWh'];
+const fMW=v=>v<1?fmt(v*1000,0)+' kW':fmt(v,1)+' MW';
+
+function config(sc){
+  const c={...DEF,...SCEN[sc]};
+  // the scenario sets temperatures and network curve; the sliders set the plant
+  c.source_temp_C=sc===S.scenario?S.src:SCEN[sc].source_temp_C??DEF.source_temp_C;
+  c.recovery_fraction=sc===S.scenario?S.rec:SCEN[sc].recovery_fraction??DEF.recovery_fraction;
+  const stoDefault=SCEN[sc].storage_capacity_MWh??DEF.storage_capacity_MWh;
+  c.hp_capacity_MW=S.hp;
+  c.storage_capacity_MWh=sc===S.scenario?S.sto:(S.size==='pilot'?0:stoDefault);
+  if(S.size==='pilot'){c.hx_max_MW=Math.max(.05,S.hp);c.charge_limit_MW=c.discharge_limit_MW=S.hp}
+  c.electricity_EUR_MWh=S.el;c.gas_EUR_MWh=S.gas;
+  if(S.offRec)c.recovery_fraction=0;if(S.offHP)c.hp_capacity_MW=0;if(S.offSto)c.storage_capacity_MWh=0;
+  return c;
+}
+function econ(m,c){
+  const capex=m.capex_EUR*S.inst, co2v=(m.reused_to_network_MWh/c.boiler_efficiency)*c.gas_CO2_t_MWh*S.co2, om=capex*S.om/100;
+  const net=m.opex_saving_EUR+co2v-om;
+  return {capex,net,co2v,om,pay:net>0?capex/net:null,lcoh:(capex*m.crf+om+m.hp_electric_MWh*S.el)/Math.max(1e-9,m.reused_to_network_MWh)};
+}
+function run(sc,keep=true){const c=config(sc);const r=simulate(D[S.weather],S.size==='pilot'?IT_PILOT:D.IT,c,S.dem,keep);r.c=c;r.e=econ(r.m,c);return r}
+
+/* ---------- charts ---------- */
+Chart.defaults.font.family=getComputedStyle(document.body).fontFamily;
+Chart.defaults.animation={duration:250};
+const charts={};
+function baseOpts(xTitle,yTitle,extra={}){
+  const ink=css('--ink-2'),grid=css('--grid');
+  return Object.assign({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:css('--ink'),titleColor:css('--bg'),bodyColor:css('--bg'),bodyFont:{family:'IBM Plex Mono'},padding:8}},
+    scales:{x:{grid:{color:grid,drawTicks:false},border:{display:false},ticks:{color:ink,padding:6,maxRotation:0,autoSkip:true},title:{display:!!xTitle,text:xTitle,color:css('--ink-3')}},
+            y:{grid:{color:grid,drawTicks:false},border:{display:false},ticks:{color:ink,padding:6},title:{display:!!yTitle,text:yTitle,color:css('--ink-3')},beginAtZero:true}}},extra);
+}
+function setChart(id,cfg){if(charts[id]){charts[id].destroy()}charts[id]=new Chart($(id),cfg)}
+function legend(id,items){$(id).innerHTML=items.map(([n,col,line])=>`<span><i class="${line?'line':''}" style="background:${col}"></i>${n}</span>`).join('')}
+
+let cur,all;
+function render(){
+  const l=L[lang];
+  cur=run(S.scenario);
+  const m=cur.m,e=cur.e,R=cur.R,c=cur.c;
+  const unit=S.size==='pilot'?1:1;
+  // KPIs
+  const payPill=e.pay==null||e.pay>15?['bad',l.bad]:e.pay>8?['warn',l.ok]:['good',l.good];
+  const [hv,hu]=fMWh(m.reused_to_network_MWh),[ev,eu]=fMWh(m.hp_electric_MWh);
+  const k=[
+    [l.cov,fmt(m.coverage_fraction*100,1),'%',`${hv} ${hu} ${l.of} ${fMWh(m.heat_demand_MWh).join(' ')}`],
+    [l.cop,fmt(m.mean_cop,2),'',`${l.elec}: ${ev} ${eu}`],
+    [l.save,fE(e.net).replace(/ (k|M)?€$/,''),(fE(e.net).match(/(k|M)?€$/)||[''])[0],`${l.capex}: ${fE(e.capex)}`],
+    [l.pay,e.pay==null?l.never:fmt(e.pay,1),e.pay==null?'':l.yr,`<span class="pill ${payPill[0]}">${payPill[1]}</span> · ${l.co2t} ${fmt(m.CO2_saving_t,0)} t`]
+  ];
+  $('kpis').innerHTML=k.map((x,i)=>`<div class="kpi${i===3?' hl':''}"><span class="k">${x[0]}</span><span class="v">${x[1]}<small>${x[2]}</small></span><span class="d">${x[3]}</span></div>`).join('');
+  // flow bars
+  let itMWh=0;const IT=S.size==='pilot'?IT_PILOT:D.IT;for(const x of IT)itMWh+=x;
+  const direct=R.direct.reduce((a,b)=>a+b,0),dis=R.dis.reduce((a,b)=>a+b,0);
+  const top=[[l.captured,m.hx_MWh,css('--s1')],[l.notCap,itMWh-m.hx_MWh,css('--gas')]];
+  const bot=[[l.hpDirect,direct,css('--s1')],[l.sto,dis,css('--s2')],[l.gasB,m.gas_heat_MWh,css('--gas')]];
+  const bar=(name,total,parts)=>`<div><div class="lbl"><span>${name}</span><span style="font-family:var(--font-mono)">${fMWh(total).join(' ')}</span></div>
+    <div class="stack" role="img" aria-label="${name}">${parts.filter(p=>p[1]>0).map(p=>`<div data-tip="${p[0]}: ${fMWh(p[1]).join(' ')} (${fmt(p[1]/total*100,1)} %)" style="flex:0 0 calc(${p[1]/total*100}% - 2px);background:${p[2]}"></div>`).join('')}</div>
+    <div class="legend" style="margin-top:6px">${parts.map(p=>`<span><i style="background:${p[2]}"></i>${p[0]} · ${fmt(p[1]/total*100,1)} %</span>`).join('')}</div></div>`;
+  const curtNote=m.curtailed_hp_heat_MWh>1?`<div class="legend"><span><i style="background:transparent;border:1.5px dashed var(--ink-3)"></i>${l.curt}: ${fMWh(m.curtailed_hp_heat_MWh).join(' ')}</span></div>`:'';
+  $('flow').innerHTML=bar(l.itHeat,itMWh,top)+bar(l.demand,m.heat_demand_MWh,bot)+curtNote;
+  // monthly
+  const days=[31,28,31,30,31,30,31,31,30,31,30,31];let h=0;const md=[],ms=[],mg=[];
+  days.forEach(d=>{let a=0,b=0,g=0;for(let i=h;i<h+d*24;i++){a+=R.direct[i];b+=R.dis[i];g+=R.gas[i]}h+=d*24;md.push(a);ms.push(b);mg.push(g)});
+  const pilot=S.size==='pilot';const mu=pilot?'MWh':'GWh',mdv=pilot?1:1e3;
+  legend('lg-mon',[[l.hpDirect,css('--s1')],[l.sto,css('--s2')],[l.gasB,css('--gas')]]);
+  const ds=(lab,data,col)=>({label:lab,data:data.map(v=>v/mdv),backgroundColor:col,borderRadius:{topLeft:4,topRight:4},borderSkipped:'bottom',borderColor:css('--panel'),borderWidth:{top:2},barPercentage:.7});
+  const monOpts=baseOpts('',mu);monOpts.scales.x.stacked=monOpts.scales.y.stacked=true;
+  monOpts.plugins.tooltip.callbacks={label:x=>` ${x.dataset.label}: ${fmt(x.raw,pilot?0:2)} ${mu}`};
+  setChart('c-mon',{type:'bar',data:{labels:l.months,datasets:[ds(l.hpDirect,md,css('--s1')),ds(l.sto,ms,css('--s2')),ds(l.gasB,mg,css('--gas'))]},options:monOpts});
+  // LDC
+  const idx=[...R.demand.keys()].sort((a,b)=>R.demand[b]-R.demand[a]);const step=6;
+  const ld=[],lc=[],lx=[];for(let i=0;i<idx.length;i+=step){ld.push(R.demand[idx[i]]);lc.push(R.direct[idx[i]]+R.dis[idx[i]]);lx.push(i)}
+  // smooth covered series (rolling mean) since it's noisy against sorted demand
+  const sm=lc.map((_,i)=>{let s=0,n=0;for(let j=Math.max(0,i-8);j<=Math.min(lc.length-1,i+8);j++){s+=lc[j];n++}return Math.min(ld[i],s/n)});
+  legend('lg-ldc',[[l.demand,css('--ink'),1],[l.hpDirect+' + '+l.sto.toLowerCase(),css('--s1')]]);
+  const ldcO=baseOpts(l.hours,'MW');ldcO.scales.x.type='linear';ldcO.scales.x.max=8760;ldcO.scales.x.ticks.stepSize=2000;ldcO.elements={point:{radius:0}};
+  ldcO.plugins.tooltip.callbacks={title:x=>`${fmt(x[0].parsed.x)} h`,label:x=>` ${x.dataset.label}: ${fmt(x.parsed.y,2)} MW`};
+  setChart('c-ldc',{type:'line',data:{datasets:[
+    {label:l.demand,data:ld.map((y,i)=>({x:lx[i],y})),borderColor:css('--ink'),borderWidth:2,fill:false},
+    {label:l.hpDirect,data:sm.map((y,i)=>({x:lx[i],y})),borderColor:css('--s1'),backgroundColor:css('--s1')+'55',borderWidth:2,fill:'origin'}]},options:ldcO});
+  renderWeek();
+  // COP scatter
+  const tw=D[S.weather],pts=[];for(let i=0;i<tw.length;i+=3){if(R.direct[i]+R.charge[i]>0)pts.push({x:tw[i],y:R.cop[i]})}
+  const copO=baseOpts(l.outT,'COP');copO.scales.x.type='linear';copO.scales.y.beginAtZero=false;copO.interaction={mode:'nearest',intersect:true};
+  copO.plugins.tooltip.callbacks={label:x=>` ${fmt(x.parsed.x,1)} °C → COP ${fmt(x.parsed.y,2)}`};
+  setChart('c-cop',{type:'scatter',data:{datasets:[{data:pts,backgroundColor:css('--s1')+'66',borderColor:css('--s1'),borderWidth:0,pointRadius:2.5,pointHoverRadius:5}]},options:copO});
+  // heatmap (savings linear in prices)
+  const els=[60,80,100,120,140,160,180,200,220],gass=[25,35,45,55,65,80];
+  const delivered=m.reused_to_network_MWh/c.boiler_efficiency;
+  const co2v=e.co2v;
+  let hm=`<div class="h" style="grid-column:1/-1;text-align:left">${l.elec_ax}</div><div class="h">${l.gas_ax.split(' ')[0]}</div>`+els.map(x=>`<div class="h">${x}</div>`).join('');
+  const blue=['#cde2fb','#9ec5f4','#6da7ec','#3987e5','#256abf','#184f95'];
+  for(const g of gass){hm+=`<div class="h">${g}</div>`;for(const x of els){
+    const net=delivered*g-m.hp_electric_MWh*x+co2v-e.om;const p=net>0?e.capex/net:null;
+    const lvl=p==null?-1:p<=4?5:p<=6?4:p<=8?3:p<=12?2:p<=20?1:0;
+    const bg=lvl<0?'transparent':blue[lvl];const fg=lvl>=3?'#fff':'#132029';
+    const me=Math.abs(x-S.el)<10&&Math.abs(g-S.gas)<5.5;
+    hm+=`<div class="c${me?' me':''}" style="background:${bg};color:${lvl<0?'var(--ink-3)':fg}" data-tip="${x} / ${g} €/MWh → ${p==null?l.never:fmt(p,1)+' '+l.yr}">${p==null?'–':p>99?'99+':fmt(p,p<10?1:0)}</div>`}}
+  $('heatmap').style.gridTemplateColumns=`52px repeat(${els.length},minmax(40px,1fr))`;$('heatmap').innerHTML=hm;
+  // scenario table
+  all=ORDER.map(s=>({s,r:s===S.scenario?cur:run(s,false)}));
+  const maxCov=Math.max(...all.map(x=>x.r.m.coverage_fraction));
+  $('sc-table').innerHTML=`<thead><tr><th>${l.scen}</th><th>${l.cover}</th><th>COP</th><th>${l.save2}</th><th>${l.capex}</th><th>${l.payb}</th><th>${l.lcoh2}</th></tr></thead><tbody>`+
+    all.map(({s,r})=>`<tr data-s="${s}" class="${s===S.scenario?'sel':''}" tabindex="0"><td>${l.sc[s]}</td><td><span class="bar" style="width:${r.m.coverage_fraction/maxCov*60}px"></span>${fmt(r.m.coverage_fraction*100,1)} %</td><td>${fmt(r.m.mean_cop,2)}</td><td>${fE(r.e.net)}</td><td>${fE(r.e.capex)}</td><td>${r.e.pay==null?l.never:fmt(r.e.pay,1)+' '+l.yr}</td><td>${fmt(r.e.lcoh,1)}</td></tr>`).join('')+'</tbody>';
+  $('sc-table').querySelectorAll('tbody tr').forEach(tr=>{const go=()=>{loadScenario(tr.dataset.s);render()};tr.onclick=go;tr.onkeydown=ev=>{if(ev.key==='Enter')go()}});
+  renderPool();
+  $('notes').innerHTML=l.notes.map(n=>`<p>${n}</p>`).join('');
+}
+function renderWeek(){
+  const l=L[lang],R=cur.R,w=S.week,a=(w-1)*168,b=Math.min(8760,a+168);
+  const d0=new Date(Date.UTC(2026,0,1)+a*3600e3);
+  $('o-wk').textContent=`${w} · ${d0.toLocaleDateString(lang==='sk'?'sk-SK':'en-GB',{day:'numeric',month:'short'})}`;
+  const lab=[],dem=[],dir=[],dis=[],gas=[],E=[],tt=[];const tw=D[S.weather];
+  for(let i=a;i<b;i++){lab.push(i-a);dem.push(R.demand[i]);dir.push(R.direct[i]);dis.push(R.dis[i]);gas.push(R.gas[i]);E.push(R.E[i]);tt.push(tw[i])}
+  legend('lg-wk',[[l.hpDirect,css('--s1')],[l.sto,css('--s2')],[l.gasB,css('--gas')],[l.demand,css('--ink'),1]]);
+  const o=baseOpts('','MW');o.scales.x.stacked=false;o.scales.y.stacked=true;o.elements={point:{radius:0},line:{tension:0}};
+  o.scales.x.ticks.callback=(v,i)=>i%24===0?`${l.day} ${i/24+1}`:'';o.scales.x.ticks.autoSkip=false;
+  o.plugins.tooltip.callbacks={title:x=>`${l.day} ${Math.floor(x[0].dataIndex/24)+1}, ${x[0].dataIndex%24}:00`,label:x=>` ${x.dataset.label}: ${fmt(x.raw,2)} MW`};
+  const area=(lab_,d,col)=>({label:lab_,data:d,borderColor:col,backgroundColor:col+'cc',borderWidth:0,fill:true,stack:'s'});
+  setChart('c-wk',{type:'line',data:{labels:lab,datasets:[area(l.hpDirect,dir,css('--s1')),area(l.sto,dis,css('--s2')),area(l.gasB,gas,css('--gas')),
+    {label:l.demand,data:dem,borderColor:css('--ink'),borderWidth:1.5,fill:false,stack:'d'}]},options:o});
+  const o2=baseOpts('','°C');o2.scales.y.beginAtZero=false;o2.elements={point:{radius:0}};o2.scales.x.ticks.callback=o.scales.x.ticks.callback;o2.scales.x.ticks.autoSkip=false;
+  o2.plugins.tooltip.callbacks={title:o.plugins.tooltip.callbacks.title,label:x=>` ${x.dataset.label}: ${fmt(x.raw,1)}${x.datasetIndex?' MWh':' °C'}`};
+  const sets=[{label:l.outT,data:tt,borderColor:css('--heat'),borderWidth:2,yAxisID:'y'}];
+  legend('lg-wk2',[[l.outT,css('--heat'),1]].concat(cur.c.storage_capacity_MWh>0?[[`${l.stoE}: ${fmt(Math.min(...E),0)}–${fmt(Math.max(...E),0)} MWh`,'transparent']]:[]));
+  setChart('c-wk2',{type:'line',data:{labels:lab,datasets:sets},options:o2});
+}
+function renderPool(){
+  const l=L[lang],P=D.pool;
+  $('pool-table').innerHTML=`<thead><tr><th>${l.pcase}</th><th>${l.ppool}</th><th>${l.pdh}</th><th>${l.pun}</th><th>${l.pel}</th></tr></thead><tbody>`+
+    Object.keys(P).map(s=>{const m=P[s].m;return `<tr data-p="${s}" class="${s===S.pool?'sel':''}" tabindex="0"><td>${l.pool[s]}</td><td>${fmt(m.pool_heat_MWh,1)}</td><td>${fmt(m.dh_heat_MWh,1)}</td><td>${fmt(m.dh_unmet_MWh,1)}</td><td>${fmt(m.hp_electric_MWh,2)}</td></tr>`}).join('')+
+    `</tbody><tfoot><tr><td colspan="5" style="color:var(--ink-3);font-size:12px;text-align:left;white-space:normal">MWh over 7 days</td></tr></tfoot>`;
+  $('pool-table').querySelectorAll('tbody tr').forEach(tr=>{const go=()=>{S.pool=tr.dataset.p;$('pool-case').value=S.pool;renderPool()};tr.onclick=go;tr.onkeydown=ev=>{if(ev.key==='Enter')go()}});
+  $('pool-case').innerHTML=Object.keys(P).map(s=>`<option value="${s}"${s===S.pool?' selected':''}>${l.pool[s]}</option>`).join('');
+  const ts=P[S.pool].ts,n=ts.T_bazen_C.length,lab=[...Array(n).keys()];
+  legend('lg-pool',[[l.dcAvail,css('--gas'),1],[l.dhDel,css('--s1')],[l.poolQ,css('--s3')],[l.dhDem,css('--ink'),1]]);
+  const o=baseOpts('','kW');o.elements={point:{radius:0}};o.scales.x.ticks.callback=(v,i)=>i%24===0?`${l.day} ${i/24+1}`:'';o.scales.x.ticks.autoSkip=false;
+  o.plugins.tooltip.callbacks={title:x=>`${l.day} ${Math.floor(x[0].dataIndex/24)+1}, ${x[0].dataIndex%24}:00 · ${l.poolT} ${fmt(ts.T_bazen_C[x[0].dataIndex],2)} °C`,label:x=>` ${x.dataset.label}: ${fmt(x.raw,0)} kW`};
+  const k=v=>v.map(x=>x/1000);
+  setChart('c-pool',{type:'line',data:{labels:lab,datasets:[
+    {label:l.dhDel,data:k(ts.Q_DH_delivered_W),borderColor:css('--s1'),backgroundColor:css('--s1')+'44',fill:'origin',borderWidth:2},
+    {label:l.poolQ,data:k(ts.Q_pool_W),borderColor:css('--s3'),borderWidth:2,fill:false},
+    {label:l.dcAvail,data:k(ts.Qdc_available_W),borderColor:css('--gas'),borderWidth:2,borderDash:[5,4],fill:false},
+    {label:l.dhDem,data:k(ts.Qdh_demand_W),borderColor:css('--ink'),borderWidth:1.5,fill:false}]},options:o});
+}
+
+/* ---------- controls ---------- */
+const sliders={src:[v=>v+' °C'],rec:[v=>Math.round(v*100)+' %'],hp:[v=>fMW(v)],sto:[v=>v+' MWh'],dem:[v=>'× '+fmt(v,2)],el:[v=>v+' €/MWh'],gas:[v=>v+' €/MWh'],co2:[v=>v+' €/t'],inst:[v=>'× '+fmt(v,1)],om:[v=>fmt(v,1)+' %']};
+function syncInputs(){for(const k in sliders){$(k).value=S[k];$('o-'+k).textContent=sliders[k][0](S[k])}
+  $('weather').value=S.weather;$('scenario').value=S.scenario;$('wk').value=S.week;
+  $('sz-big').setAttribute('aria-pressed',S.size==='big');$('sz-pilot').setAttribute('aria-pressed',S.size==='pilot');
+  $('ec-repo').setAttribute('aria-pressed',S.econ==='repo');$('ec-stress').setAttribute('aria-pressed',S.econ==='stress');}
+function setRanges(){if(S.size==='pilot'){Object.assign($('hp'),{min:.05,max:1,step:.05});Object.assign($('sto'),{min:0,max:10,step:.5})}else{Object.assign($('hp'),{min:1,max:20,step:.5});Object.assign($('sto'),{min:0,max:200,step:5})}}
+function loadScenario(s){S.scenario=s;const c={...DEF,...SCEN[s]};S.src=c.source_temp_C;S.rec=c.recovery_fraction;S.sto=S.size==='pilot'?0:c.storage_capacity_MWh;syncInputs()}
+function applyLang(){document.documentElement.lang=lang;$('lang-en').setAttribute('aria-pressed',lang==='en');$('lang-sk').setAttribute('aria-pressed',lang==='sk');
+  document.querySelectorAll('[data-i]').forEach(el=>{const k=el.dataset.i;if(!el.dataset.en)el.dataset.en=el.innerHTML;el.innerHTML=lang==='en'?el.dataset.en:(T.sk[k]??el.dataset.en)});
+  $('scenario').innerHTML=ORDER.map(s=>`<option value="${s}">${L[lang].sc[s]}</option>`).join('');$('scenario').value=S.scenario;
+  for(const k in sliders)$('o-'+k).textContent=sliders[k][0](S[k]);}
+let pend;const later=()=>{cancelAnimationFrame(pend);pend=requestAnimationFrame(render)};
+for(const k in sliders){$(k).addEventListener('input',ev=>{S[k]=+ev.target.value;$('o-'+k).textContent=sliders[k][0](S[k]);if(['el','gas','co2','inst','om'].includes(k)){S.econ='custom';syncInputs()}later()})}
+$('weather').onchange=e=>{S.weather=e.target.value;render()};
+[['off-rec','offRec'],['off-hp','offHP'],['off-sto','offSto']].forEach(([id,k])=>$(id).addEventListener('change',e=>{S[k]=e.target.checked;render()}));
+$('scenario').onchange=e=>{loadScenario(e.target.value);render()};
+$('wk').oninput=e=>{S.week=+e.target.value;renderWeek()};
+$('pool-case').onchange=e=>{S.pool=e.target.value;renderPool()};
+$('sz-big').onclick=()=>{S.size='big';setRanges();S.hp=12;S.dem=1;loadScenario(S.scenario);render()};
+$('sz-pilot').onclick=()=>{S.size='pilot';setRanges();S.hp=.3;S.dem=1;loadScenario(S.scenario);render()};
+$('ec-repo').onclick=()=>{Object.assign(S,{econ:'repo',el:100,gas:50,co2:0,inst:1,om:0});syncInputs();render()};
+$('ec-stress').onclick=()=>{Object.assign(S,{econ:'stress',el:160,gas:40,co2:70,inst:1.8,om:2.5});syncInputs();render()};
+$('lang-en').onclick=()=>{lang='en';try{localStorage.setItem('hc-lang','"en"')}catch(e){};applyLang();render()};
+$('lang-sk').onclick=()=>{lang='sk';try{localStorage.setItem('hc-lang','"sk"')}catch(e){};applyLang();render()};
+// shared tooltip for flow bars and heatmap cells
+const tip=document.createElement('div');tip.className='tip';tip.hidden=true;document.body.appendChild(tip);
+document.addEventListener('mousemove',ev=>{const t=ev.target.closest('[data-tip]');if(!t){tip.hidden=true;return}tip.textContent=t.dataset.tip;tip.hidden=false;
+  tip.style.left=Math.min(innerWidth-tip.offsetWidth-8,ev.clientX+12)+'px';tip.style.top=(ev.clientY+14)+'px'});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',render);
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+/* ================= Components & Construction ================= */
+__COOL__
+const L2={
+en:{tab_model:"Annual model",tab_sim:"Simulator & switches",tab_comp:"Components",tab_build:"Construction & safety",
+ n_it:"Data centre",n_it_s:"servers + coolant",n_hx:"Heat exchanger",n_hp:"Heat-pump bank",n_town:"District network",n_tes:"Thermal storage",n_gas:"Gas boiler",n_rc:"Dry coolers N+1",n_grid:"Grid power",n_pool:"Pool (own model)",
+ tip_it:"Servers turn electricity into heat. Recovery fraction sets how much the liquid loop captures.",tip_hx:"Plate heat exchanger. Q = min(0.97·Q_source, rating); evaporator gets source minus 3 K.",tip_hp:"Raises 42 °C water to 55–80 °C. COP = 0.45·Carnot, part-load penalty 8 %.",tip_town:"Demand driven by outdoor temperature only (synthetic curve).",tip_tes:"Hot-water store with 95 % charge and discharge efficiency.",tip_gas:"Covers whatever recovery and storage cannot. 90 % efficient.",tip_rc:"Independent IT cooling. Must reject all heat when nobody takes it.",tip_grid:"Compressor electricity.",tip_pool:"Separate 15-minute model, 150 kW exchanger branch. Not part of the annual run.",
+ hxSrc:"Server coolant",hxEvap:"To heat pump evaporator",hxAppr:"approach",
+ sinkT:"Network supply temperature °C",src:"source",carrier:"Carrier certified (10 °C source)",
+ supply:"Supply °C",ret:"Return °C",demand:"Demand MW",siteRange:"site range",
+ stoMax:"Daily max",stoMin:"Daily min",noSto:"This scenario has no storage. Pick one with storage, or move the storage slider.",
+ evap:"Evaporation",conv:"Convection",rad:"Radiation",cond:"Walls and floor",makeup:"Make-up water",fixed:"Other",
+ plDay:"Open, swimmers",plNight:"Covered, quiet",plNightOpen:"Uncovered, quiet",
+ mode:["Idle","Direct exchanger + HP","Heat pump only","Storage only","IT fault, safe stop"],h:"h",
+ eqItem:"Item",eq10:"10 MW design",eqVend:"Candidates named",eqStat:"Still missing",
+ extraGas:"Extra gas, MWh/year",hpCap:"Heat-pump output cap, MW",npvAx:"NPV, k€",capAx:"Installed cost, k€",
+ coolT:"Coolant °C",cap:"Cooler capacity MW",tripL:"Trip 40 °C",safe:"Servers stay up",trip:"Servers trip",maxT:"Peak coolant",tripFor:"trip active for",min:"min",
+ psItem:"Quantity",psVal:"Pilot",psHow:"How",
+ ps:["Coolant flow","Pipe inner diameter","Buffer tank for ride-through","Heat-pump output (COP 5)","Heat-pump electricity","Network-side flow at 20 K","Dry coolers, N+1"],
+ hxArea:"Plate area, m²",hxSrcT:"Source water in, °C",
+ fmId:"ID",fmSys:"Part",fmMode:"Failure",fmCons:"Consequence",fmGuard:"Safeguard needed",fmSim:"Modelled?",fmPri:"Priority"},
+sk:{tab_model:"Ročný model",tab_comp:"Komponenty",tab_build:"Výstavba a bezpečnosť",
+ n_it:"Dátové centrum",n_it_s:"servery + chladivo",n_hx:"Výmenník tepla",n_hp:"Tepelné čerpadlá",n_town:"Tepelná sieť",n_tes:"Zásobník tepla",n_gas:"Plynový kotol",n_rc:"Suché chladiče N+1",n_grid:"Elektrina zo siete",n_pool:"Bazén (vlastný model)",
+ tip_it:"Servery menia elektrinu na teplo. Podiel zachytenia určuje, koľko zachytí kvapalinový okruh.",tip_hx:"Doskový výmenník. Q = min(0,97·Q_zdroj, menovitý výkon); výparník dostane zdroj mínus 3 K.",tip_hp:"Zdvihne 42 °C vodu na 55–80 °C. COP = 0,45·Carnot, penalizácia čiastočného zaťaženia 8 %.",tip_town:"Dopyt závisí len od vonkajšej teploty (syntetická krivka).",tip_tes:"Zásobník teplej vody, účinnosť nabíjania aj vybíjania 95 %.",tip_gas:"Pokryje, čo zachytené teplo a zásobník nestihnú. Účinnosť 90 %.",tip_rc:"Nezávislé chladenie IT. Musí odviesť všetko teplo, keď ho nikto neodoberá.",tip_grid:"Elektrina pre kompresory.",tip_pool:"Samostatný 15-minútový model, vetva s výmenníkom 150 kW. Nie je súčasťou ročného výpočtu.",
+ hxSrc:"Chladivo serverov",hxEvap:"Do výparníka čerpadla",hxAppr:"rozdiel",
+ sinkT:"Teplota prívodu siete °C",src:"zdroj",carrier:"Carrier certifikované (zdroj 10 °C)",
+ supply:"Prívod °C",ret:"Spiatočka °C",demand:"Dopyt MW",siteRange:"rozsah lokality",
+ stoMax:"Denné maximum",stoMin:"Denné minimum",noSto:"Tento scenár nemá zásobník. Vyberte scenár so zásobníkom alebo posuňte jazdec zásobníka.",
+ evap:"Odparovanie",conv:"Konvekcia",rad:"Sálanie",cond:"Steny a dno",makeup:"Doplňovaná voda",fixed:"Ostatné",
+ plDay:"Otvorený, plávajúci",plNight:"Zakrytý, pokoj",plNightOpen:"Nezakrytý, pokoj",
+ mode:["Nečinný","Priamy výmenník + TČ","Len tepelné čerpadlo","Len zásobník","Porucha IT, bezpečné zastavenie"],h:"h",
+ eqItem:"Položka",eq10:"Návrh 10 MW",eqVend:"Uvedení dodávatelia",eqStat:"Čo ešte chýba",
+ extraGas:"Plyn navyše, MWh/rok",hpCap:"Strop výkonu TČ, MW",npvAx:"NPV, tis. €",capAx:"Investícia s inštaláciou, tis. €",
+ coolT:"Chladivo °C",cap:"Výkon chladičov MW",tripL:"Odpojenie 40 °C",safe:"Servery bežia",trip:"Servery sa odpoja",maxT:"Max. teplota chladiva",tripFor:"odpojenie trvá",min:"min",
+ psItem:"Veličina",psVal:"Pilot",psHow:"Ako",
+ ps:["Prietok chladiva","Vnútorný priemer potrubia","Akumulačná nádrž na preklenutie","Výkon tepelného čerpadla (COP 5)","Elektrina pre TČ","Prietok na strane siete pri 20 K","Suché chladiče, N+1"],
+ hxArea:"Plocha dosiek, m²",hxSrcT:"Vstup zdroja, °C",
+ fmId:"ID",fmSys:"Časť",fmMode:"Porucha",fmCons:"Dôsledok",fmGuard:"Potrebná ochrana",fmSim:"Modelované?",fmPri:"Priorita"}};
+Object.assign(T.sk,{tab_sim:"Simulátor a vypínače",offs:"Vypnúť",off_rec:"Zachytávanie tepla",off_hp:"Tepelné čerpadlo",off_sto:"Zásobník",
+ sm_h:"Simulátor bazénového zariadenia: vypnite komponenty a sledujte reakciu riadenia",sm_p:"Uzavretý Simulink/Stateflow model v04 z repozitára (bazén 500 m³, tepelné čerpadlo 200 kW, malý zásobník, vetva do siete), prepočítaný naživo v 15-minútových krokoch na jeden týždeň. Komponent vypnite na celý týždeň alebo len v okne poruchy. JavaScriptový prepis sa zhoduje s Pythonom repozitára na 15 desatinných miest vo všetkých ôsmich testovacích prípadoch.",
+ sm_sw:"Komponenty",sm_win:"Okno poruchy",sm_case:"Testovací prípad a limity",sm_off:"Posun teploty zdroja",sm_hp:"Tepelný limit TČ",sm_pl:"Limit výmenníka bazéna",sm_vol:"Objem bazéna",sm_reset:"Obnoviť všetko",
+ sm_slx:"Simulink diagram · najvyššia úroveň · živé hodnoty signálov",sm_sf:"Stateflow diagram · Dispecer_Stateflow · aktívny režim a prechody za týždeň",sm_th:"Týždeň krok po kroku",
+ tab_model:L2.sk.tab_model,tab_comp:L2.sk.tab_comp,tab_build:L2.sk.tab_build,
+ sys_h:"Celé zariadenie od začiatku po koniec",sys_p:"Schéma systému z repozitára s ročnou energiou na každej vetve podľa scenára a lokality vľavo. Prejdite myšou na komponent pre jeho úlohu a rovnicu.",
+ c1_h:"Dátové centrum: zdroj tepla",c1_p:"Výkon IT pre každú hodinu roka (riadky sú dni, stĺpce hodiny). Všetko sa zmení na teplo; zachytená časť ide do výmenníka.",
+ c2_h:"Výmenník tepla: prechod medzi okruhmi",c2_p:"Oddeľuje chladivo serverov od okruhu tepelného čerpadla. Prenesie 97 % zachyteného tepla do svojho menovitého výkonu a stojí 3 K teploty.",
+ c3_h:"Tepelné čerpadlo: zdvih teploty",c3_p:"COP ako 45 % Carnotovho limitu pre každú teplotu zdroja v závislosti od teploty prívodu siete. Body sú certifikované hodnoty Carrier (Eurovent, zdroj 10 °C), ktoré repozitár použil na kontrolu.",
+ c4_h:"Tepelná sieť: ekvitermná regulácia",c4_p:"Chladnejšie dni zvyšujú dopyt aj teplotu vody, ktorú musí čerpadlo dosiahnuť. Vyfarbené pásmo: vonkajšie teploty, ktoré táto lokalita naozaj zažije.",
+ c5_h:"Zásobník tepla: presun tepla v čase",c5_p:"Denný rozsah uloženej energie počas roka. Nabíja sa, keď čerpadlo vyrobí viac, než mesto potrebuje, a vybíja sa pri nedostatku.",
+ c6_h:"Bazén: kam ide jeho teplo",c6_p:"Tepelné straty 500 m³ bazéna pri vode 27,5 °C v hale s 29 °C, z rovníc modelu bazéna. Plachta hlavne znižuje odparovanie.",
+ c7_h:"Riadenie: v akom režime je bazénové zariadenie",c7_p:"Stateflow diagram modelu bazéna volí každých 15 minút jeden z piatich režimov. Pruhy ukazujú hodiny v každom režime počas 7-dňového testu pre všetky pôvodné prípady.",
+ eq_h:"Zariadenia, ktoré inžinieri navrhli",eq_p:"Z práce na výbere zariadení a inžinierskom vydaní v repozitári (23. 10. 2026). Nič z toho zatiaľ nie je cenová ponuka dodávateľa; posledný stĺpec hovorí, čo chýba.",
+ hp_h:"Koľko modulov tepelného čerpadla?",hp_p:"Koľko plynu sieť spáli navyše za rok, keď je výkon čerpadiel obmedzený. Nad 10 MW sa takmer nič nezíska; inžinieri zvolili 6 + 1 záložnú jednotku Carrier 61XWH-ZE17 (9,42 MW menovite).",
+ ce_h:"Výmenník pre bazén: koľko je hodný",ce_p:"NPV za 20 rokov pri 6 % pre priamy 150 kW výmenník v závislosti od investície. Oplatí sa len pri inštalácii do cca 103 tis. €.",
+ cs_h:"Keď teplo nikto neodoberá: simulátor poruchy chladenia IT",cs_p:"Dátové centrum musí odviesť celých 10 MW vlastnými suchými chladičmi, keď bazén ani mesto nič neodoberú. V 10. minúte zlyhá jeden chladič a záložný naštartuje s oneskorením. Chladivo nad 40 °C odpojí servery. Je to Simulink model poruchy z repozitára, prepočítaný naživo; presne reprodukuje ich šesť uložených prípadov.",
+ cs_units:"Inštalované moduly chladičov (po 2 MW)",cs_der:"Letné zníženie výkonu",cs_dur:"Oneskorenie štartu zálohy",cs_buf:"Akumulačná nádrž chladiva",cs_pump:"Čerpadlo chladiva sa tiež zastaví na 10 s",
+ ps_h:"Dimenzovanie 250 kW pilotu",ps_p:"Rovnaké vzorce, aké inžinieri použili pre 10 MW zariadenie, aplikované na náš pilotný modul. Orientačné čísla na prvý rozhovor s projektantom.",
+ ps_kw:"Teplo z IT",ps_dt:"ΔT chladiva",ps_v:"Rýchlosť v potrubí",ps_ride:"Preklenutie výpadku chladenia",
+ hx_h:"Dimenzovanie výmenníka pre bazén",hx_p:"Protiprúdový doskový výmenník, 150 kW do bazénovej vody so spiatočkou 27,5 °C a ohrevom o 2 K. Teplejší zdroj znamená menší a lacnejší výmenník; pod cca 32 °C nefunguje vôbec.",
+ fm_h:"Čo môže zlyhať a čo ešte nie je overené",fm_p:"Zoznam porúch z repozitára. Žiadny riadok zatiaľ nie je fyzicky overený; položky P0 blokujú výstavbu."});
+const EQ=[
+ {i:{en:"District heat pumps",sk:"Tepelné čerpadlá pre sieť"},d:"Carrier 61XWH-ZE17 ×(6+1), 1.57 MW each at W20/15 → W70/75; 9.42 MW duty",v:"Carrier AquaForce 61XWH-ZE, Oilon ChillHeat",s:{en:"Capacity and COP at the real 35/30 → 50/70 °C point (vendor selection tool)",sk:"Výkon a COP v reálnom bode 35/30 → 50/70 °C (výberový nástroj dodávateľa)"},p:"P0"},
+ {i:{en:"Independent IT heat rejection",sk:"Nezávislé odvádzanie tepla IT"},d:"10 MW full rated, N+1 dry coolers, ~1,727 m³/h at 5 K, ~553 mm pipe at 2 m/s",v:"Güntner V-shape VARIO, Kelvion recoolers",s:{en:"Summer-peak capacity, pump curves, UPS-fed pumps",sk:"Výkon v letnej špičke, krivky čerpadiel, čerpadlá na UPS"},p:"P0"},
+ {i:{en:"Pool plate heat exchanger",sk:"Doskový výmenník pre bazén"},d:"150 kW titanium gasketed, 35/32 ↔ 27.5/29.5 °C, LMTD 4.98 K, ~25 m² at U = 1500",v:"Alfa Laval (custom); Pahlén MFT680 rejected",s:{en:"Signed four-port rating and water-chemistry check",sk:"Podpísaný výpočet pre štyri porty a kontrola chémie vody"},p:"P1"},
+ {i:{en:"Pool-side pumps",sk:"Čerpadlá bazéna"},d:"43.2 m³/h primary (70 kPa), 64.8 m³/h pool side (80 kPa), η 60 % assumed",v:"Grundfos TPE (clean loop), SPECK BADU (pool water)",s:{en:"Real pressure losses",sk:"Skutočné tlakové straty"},p:"P1"},
+ {i:{en:"Thermal storage",sk:"Zásobník tepla"},d:"100 MWh hot water, ±5 MW, 95 % each way (annual model)",v:"–",s:{en:"Not sized physically (volume, site)",sk:"Fyzicky nenadimenzovaný (objem, miesto)"},p:"P1"},
+ {i:{en:"Gas backup boiler",sk:"Záložný plynový kotol"},d:"Peak ~10.6 MW in the model",v:"existing plant",s:{en:"Boiler redundancy (F16)",sk:"Redundancia kotlov (F16)"},p:"P1"},
+ {i:{en:"Heat meters at DC boundary",sk:"Merače tepla na hranici DC"},d:"Needed for ERF reporting under EU 2024/1364, EN 50600-4-6",v:"Siemens SITRANS TS500 + certified meter",s:{en:"Meter location agreed with operator",sk:"Miesto merania dohodnuté s prevádzkovateľom"},p:"P1"}];
+const FMSK={reuse_district_stops:"sieť prestane odoberať",pool_heat_demand_disappears:"bazén prestane odoberať",one_recooler_outage:"výpadok jedného chladiča",heat_rejection_fan_derating:"zníženie výkonu ventilátorov",coolant_pump_failure:"porucha čerpadla chladiva",grid_failure:"výpadok siete",coolant_outlet_high_temperature:"vysoká teplota chladiva",control_network_or_BMS_failure:"porucha riadenia / BMS",coolant_leak_or_low_pressure:"únik chladiva / nízky tlak",loss_of_pool_and_district_simultaneously:"bazén aj sieť naraz",thermostat_sensor_offset:"chyba snímača termostatu",source_hot_side_drops_below_terminal:"zdroj príliš studený",chlorine_dosing_before_heat_exchanger:"chlór pred výmenníkom",COP_and_capacity_differ_from_nominal:"COP a výkon iné ako katalóg",large_unit_failure_and_30min_restart:"výpadok veľkej jednotky, reštart 30 min",gas_backup_unavailable:"plynová záloha nedostupná",heat_meter_boundary_wrong:"zlé miesto merača",incorrect_legal_edition:"nesprávne znenie predpisu"};
+const lt=k=>(L2[lang]||L2.en)[k];
+let view='model';const rendered={};
+function route(){const h=(location.hash||'#model').slice(1);view=['model','sim','components','build'].includes(h)?h:'model';
+  ['model','sim','components','build'].forEach(v=>{$('v-'+v).hidden=v!==view;$('t-'+v).setAttribute('aria-selected',v===view)});
+  $('layout').classList.toggle('full',view==='build'||view==='sim');renderView()}
+function renderView(){if(view==='model'&&cur&&rendered.boot)_render();rendered.boot=1;if(view==='sim')renderSim();else if(view==='components')renderComponents();else if(view==='build')renderBuild()}
+window.addEventListener('hashchange',route);
+
+function renderComponents(){
+  if(!cur)return;const l=L[lang],R=cur.R,m=cur.m,c=cur.c;
+  // --- schematic
+  const IT=S.size==='pilot'?IT_PILOT:D.IT;let itMWh=0;for(const x of IT)itMWh+=x;
+  let dir=0,dis=0,ch=0;for(let i=0;i<R.direct.length;i++){dir+=R.direct[i];dis+=R.dis[i];ch+=R.charge[i]}
+  const f=v=>fMWh(v).join(' ');const W=v=>Math.max(1.5,Math.min(16,v/itMWh*16));
+  const N=[['it',30,150,150,84,'hot'],['hx',260,150,150,84,''],['hp',490,150,150,84,''],['town',790,70,160,84,'hot'],['tes',490,300,150,72,''],['gas',790,290,160,72,''],['rc',260,300,150,72,'ext'],['grid',490,20,150,60,'ext'],['pool',30,20,150,60,'ext']];
+  const sub={it:`${fMW(itMWh/8760)} avg`,hx:`ε 0.97 · −3 K`,hp:`COP ${fmt(m.mean_cop,2)}`,town:f(m.heat_demand_MWh),tes:`${fmt(c.storage_capacity_MWh,c.storage_capacity_MWh<10?1:0)} MWh`,gas:f(m.gas_heat_MWh),rc:'10 MW, N+1',grid:f(m.hp_electric_MWh),pool:'150 kW HX'};
+  const nm={it:'n_it',hx:'n_hx',hp:'n_hp',town:'n_town',tes:'n_tes',gas:'n_gas',rc:'n_rc',grid:'n_grid',pool:'n_pool'};
+  const P=Object.fromEntries(N.map(n=>[n[0],{x:n[1],y:n[2],w:n[3],h:n[4]}]));
+  const edge=(d,v,col,lab,lx,ly,dash)=>`<path d="${d}" fill="none" stroke="${col}" stroke-width="${W(v)}" ${dash?'stroke-dasharray="6 5"':''} marker-end="url(#ar)" stroke-linecap="butt"/>`+(lab?`<text class="sch-lbl" x="${lx}" y="${ly}">${lab}</text>`:'');
+  const s1=css('--s1'),s2=css('--s2'),hot=css('--heat'),gas=css('--gas'),ink=css('--ink-3');
+  let g=`<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="${ink}"/></marker></defs>`;
+  g+=edge(`M180,192 H258`,m.hx_MWh,hot,f(m.hx_MWh),186,180);
+  g+=edge(`M105,234 V336 H258`,itMWh-m.hx_MWh,gas,f(itMWh-m.hx_MWh),112,326,true);
+  g+=edge(`M410,192 H488`,m.hx_MWh,hot,'',0,0);
+  g+=edge(`M565,80 V148`,m.hp_electric_MWh,s1,'',0,0);
+  g+=edge(`M640,175 H700 V112 H788`,dir,s1,f(dir),648,165);
+  if(ch>1)g+=edge(`M565,234 V298`,ch,s2,f(ch),574,270);
+  if(dis>1)g+=edge(`M640,336 H720 V140 H788`,dis,s2,f(dis),648,358);
+  g+=edge(`M870,290 V156`,m.gas_heat_MWh,gas,'',0,0);
+  g+=edge(`M335,148 V60 H182`,1,ink,'',0,0,true);
+  g+=N.map(([k,x,y,w,h,cls])=>`<g class="sch-node ${cls}" data-tip="${lt('tip_'+k)}" tabindex="0"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8"/><text class="t" x="${x+12}" y="${y+26}">${lt(nm[k])}</text><text class="s" x="${x+12}" y="${y+46}">${sub[k]}</text></g>`).join('');
+  $('schem').innerHTML=g;
+  // --- IT heatmap canvas
+  const cv=$('it-heat'),ctx=cv.getContext('2d');cv.width=24*4;cv.height=365;const img=ctx.createImageData(96,365);
+  let lo=Infinity,hi=-Infinity;for(const v of IT){lo=Math.min(lo,v);hi=Math.max(hi,v)}
+  const ramp=['#cde2fb','#9ec5f4','#6da7ec','#3987e5','#256abf','#184f95','#0d366b'].map(h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16)));
+  for(let d=0;d<365;d++)for(let h=0;h<24;h++){const v=(IT[d*24+h]-lo)/(hi-lo||1),p=v*(ramp.length-1),i=Math.min(ramp.length-2,Math.floor(p)),t=p-i;
+    const col=ramp[i].map((a,j)=>a+(ramp[i+1][j]-a)*t);for(let k=0;k<4;k++){const o=(d*96+h*4+k)*4;img.data[o]=col[0];img.data[o+1]=col[1];img.data[o+2]=col[2];img.data[o+3]=255}}
+  ctx.putImageData(img,0,0);
+  $('it-scale').innerHTML=`<span>${fMW(lo)}</span><i style="background:linear-gradient(90deg,#cde2fb,#3987e5,#0d366b)"></i><span>${fMW(hi)}</span><span style="margin-left:12px">0 h → 23 h · Jan ↓ Dec</span>`;
+  // --- HX temperature diagram
+  const ts=c.source_temp_C,te=ts-c.hx_approach_K;
+  $('hx-svg').innerHTML=`<defs><marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0L10,5L0,10z" fill="${ink}"/></marker></defs>
+   <rect x="190" y="30" width="140" height="170" rx="6" fill="var(--accent-soft)" stroke="var(--ink-2)"/>
+   ${[0,1,2,3,4,5,6].map(i=>`<line x1="${205+i*18}" y1="40" x2="${205+i*18}" y2="190" stroke="var(--ink-3)" stroke-width="1"/>`).join('')}
+   <path d="M20,70 H186" stroke="${hot}" stroke-width="6" marker-end="url(#ar2)"/><path d="M334,70 H500" stroke="${s1}" stroke-width="6" marker-end="url(#ar2)"/>
+   <path d="M186,165 H20" stroke="${hot}" stroke-width="4" stroke-opacity=".5" marker-end="url(#ar2)"/><path d="M500,165 H334" stroke="${s1}" stroke-width="4" stroke-opacity=".5" marker-end="url(#ar2)"/>
+   <text x="20" y="55" class="sch-lbl" style="fill:var(--ink)">${lt('hxSrc')} · ${fmt(ts,0)} °C</text>
+   <text x="340" y="55" class="sch-lbl" style="fill:var(--ink)">${lt('hxEvap')}</text><text x="340" y="95" class="sch-lbl">${fmt(te,0)} °C (${fmt(c.hx_approach_K,0)} K ${lt('hxAppr')})</text>
+   <text x="260" y="22" text-anchor="middle" class="sch-lbl" style="fill:var(--ink)">${f(m.hx_MWh)} / ${l.yr==='y'?'year':'rok'}</text>
+   <text x="20" y="190" class="sch-lbl">${lang==='sk'?'späť do serverov':'back to servers'}</text><text x="340" y="190" class="sch-lbl">${lang==='sk'?'späť z výparníka':'back from evaporator'}</text>`;
+  // --- COP map
+  const sinks=[];for(let t=35;t<=85;t+=1)sinks.push(t);
+  const cols=[css('--s4'),css('--s2'),css('--s1'),css('--s3')];const srcs=[10,25,35,45];
+  const cop=(sink,evap)=>Math.min(7,Math.max(2.2,.45*(sink+273.15)/Math.max(1,sink-evap)));
+  legend('lg-cop2',srcs.map((s,i)=>[`${s} °C ${lt('src')}${s===c.source_temp_C?' ●':''}`,cols[i],1]).concat([[lt('carrier'),css('--ink')]]));
+  const o=baseOpts(lt('sinkT'),'COP');o.scales.x.type='linear';o.scales.x.min=35;o.scales.x.max=85;o.scales.y.min=0;o.scales.y.max=7.5;o.elements={point:{radius:0}};o.interaction={mode:'nearest',intersect:false};
+  o.plugins.tooltip.callbacks={title:x=>`${x[0].parsed.x} °C`,label:x=>` ${x.dataset.label}: COP ${fmt(x.parsed.y,2)}`};
+  const sets=srcs.map((s,i)=>({label:`${s} °C`,data:sinks.map(t=>({x:t,y:cop(t,s===10?10:s-3)})),borderColor:cols[i],borderWidth:s===c.source_temp_C?3:2}));
+  sets.push({type:'scatter',label:'Carrier W10/7',data:[[35,5.48],[45,4.71],[55,3.92],[65,3.17]].map(([x,y])=>({x,y})),backgroundColor:css('--ink'),borderColor:css('--panel'),borderWidth:2,pointRadius:6});
+  sets.push({label:lang==='sk'?'Pásmo siete':'Network range',data:[{x:c.supply_min_C,y:7.3},{x:c.supply_max_C,y:7.3}],borderColor:css('--heat'),borderWidth:6,pointRadius:0});
+  setChart('c-cop2',{type:'line',data:{datasets:sets},options:o});
+  // --- network curve
+  const touts=[];for(let t=-26;t<=30;t++)touts.push(t);const cl=(x,a,b)=>Math.min(b,Math.max(a,x));
+  const sup=touts.map(t=>c.fixed_temperature?c.supply_fixed_C:c.supply_min_C+cl((16-t)/28,0,1)*(c.supply_max_C-c.supply_min_C));
+  const ret=touts.map(t=>c.fixed_temperature?c.supply_fixed_C-30:c.return_min_C+cl((16-t)/28,0,1)*(c.return_max_C-c.return_min_C));
+  const dem=touts.map(t=>(2+18*cl((16-t)/28,0,1.15))/.94*S.dem*(S.size==='pilot'?1:1));
+  const tw=D[S.weather];let tmin=Infinity,tmax=-Infinity;for(const v of tw){tmin=Math.min(tmin,v);tmax=Math.max(tmax,v)}
+  legend('lg-net',[[lt('supply'),css('--heat'),1],[lt('ret'),css('--s1'),1],[lt('demand'),css('--ink'),1],[`${lt('siteRange')} ${fmt(tmin,1)} … ${fmt(tmax,1)} °C`,css('--accent-soft')]]);
+  const on=baseOpts(l.outT,'°C / MW');on.scales.x.type='linear';on.scales.x.min=-26;on.scales.x.max=30;on.elements={point:{radius:0}};
+  on.plugins.tooltip.callbacks={title:x=>`${x[0].parsed.x} °C`,label:x=>` ${x.dataset.label}: ${fmt(x.parsed.y,1)}`};
+  const band={id:'band',beforeDraw(ch){const {ctx,chartArea:a,scales:{x}}=ch;ctx.save();ctx.fillStyle=css('--accent-soft');ctx.fillRect(x.getPixelForValue(tmin),a.top,x.getPixelForValue(tmax)-x.getPixelForValue(tmin),a.bottom-a.top);ctx.restore()}};
+  setChart('c-net',{type:'line',plugins:[band],data:{datasets:[
+    {label:lt('supply'),data:touts.map((t,i)=>({x:t,y:sup[i]})),borderColor:css('--heat'),borderWidth:2},
+    {label:lt('ret'),data:touts.map((t,i)=>({x:t,y:ret[i]})),borderColor:css('--s1'),borderWidth:2},
+    {label:lt('demand'),data:touts.map((t,i)=>({x:t,y:dem[i]})),borderColor:css('--ink'),borderWidth:2,borderDash:[5,4]}]},options:on});
+  // --- storage
+  const smx=[],smn=[];for(let d=0;d<365;d++){let a=Infinity,b=-Infinity;for(let h=0;h<24;h++){const v=R.E[d*24+h];a=Math.min(a,v);b=Math.max(b,v)}smn.push(a);smx.push(b)}
+  const so=baseOpts('','MWh');so.elements={point:{radius:0}};so.scales.x.ticks.callback=(v,i)=>{const md=[0,31,59,90,120,151,181,212,243,273,304,334].indexOf(i);return md>=0?l.months[md]:''};so.scales.x.ticks.autoSkip=false;
+  so.plugins.tooltip.callbacks={title:x=>`${lang==='sk'?'Deň':'Day'} ${x[0].dataIndex+1}`,label:x=>` ${x.dataset.label}: ${fmt(x.raw,1)} MWh`};
+  $('sto-sub').textContent=c.storage_capacity_MWh>0?(lang==='sk'?T.sk.c5_p:$('sto-sub').dataset.en):lt('noSto');
+  setChart('c-sto',{type:'line',data:{labels:smx.map((_,i)=>i),datasets:[
+    {label:lt('stoMax'),data:smx,borderColor:css('--s2'),backgroundColor:css('--s2')+'40',fill:'+1',borderWidth:1.5},
+    {label:lt('stoMin'),data:smn,borderColor:css('--s2'),borderWidth:1,fill:false}]},options:so});
+  // --- pool losses (pool model equations)
+  const loss=(T,air,rh,act,cov)=>{const pv=.61094*Math.exp(17.625*T/(T+243.04)),pa=rh*.61094*Math.exp(17.625*air/(air+243.04));const mv=Math.max(0,4e-5*312.5*(pv-pa)*act*(1-.9*cov));
+    return [mv*2440000,3*312.5*(T-air)*(1-.75*cov),.95*5.670374419e-8*312.5*((T+273.15)**4-(air-2+273.15)**4)*(1-.75*cov),800*(T-20),mv*4182*(T-15),2000].map(v=>v/1000)};
+  const cases=[[lt('plDay'),loss(27.5,29,.6,1,0)],[lt('plNightOpen'),loss(27.5,29,.6,.5,0)],[lt('plNight'),loss(27.5,29,.6,.5,1)]];
+  const keys=['evap','conv','rad','cond','makeup','fixed'],pc=[css('--s1'),css('--s2'),css('--s3'),css('--s4'),css('--accent'),css('--gas')];
+  legend('lg-pl',keys.map((k,i)=>[lt(k),pc[i]]));
+  const po=baseOpts('kW','');po.indexAxis='y';po.scales.x.stacked=po.scales.y.stacked=true;po.scales.y.grid={display:false};po.interaction={mode:'nearest',intersect:true};
+  po.plugins.tooltip.callbacks={label:x=>` ${x.dataset.label}: ${fmt(x.raw,1)} kW`,footer:x=>`Σ ${fmt(cases[x[0].dataIndex][1].reduce((a,b)=>a+b,0),1)} kW`};
+  setChart('c-pl',{type:'bar',data:{labels:cases.map(x=>x[0]),datasets:keys.map((k,i)=>({label:lt(k),data:cases.map(x=>x[1][i]),backgroundColor:pc[i],borderColor:css('--panel'),borderWidth:1,barPercentage:.6}))},options:po});
+  // --- modes
+  const mc=[css('--gas'),css('--s3'),css('--s1'),css('--s2'),css('--bad')];
+  $('modes').innerHTML=`<div class="legend">${lt('mode').map((n,i)=>`<span><i style="background:${mc[i]}"></i>${i} · ${n}</span>`).join('')}</div>`+
+   Object.keys(D.pool).map(s=>{const md=D.pool[s].modes,tot=md.reduce((a,b)=>a+b,0);return `<div class="mrow"><span>${l.pool[s]}</span><div class="mbar">${md.map((h,i)=>h>0?`<div style="flex:0 0 calc(${h/tot*100}% - 2px);background:${mc[i]}" data-tip="${lt('mode')[i]}: ${fmt(h,1)} ${lt('h')}"></div>`:'').join('')}</div></div>`}).join('');
+}
+
+function renderBuild(){
+  const l=L[lang];
+  $('eq-table').innerHTML=`<thead><tr><th>${lt('eqItem')}</th><th style="text-align:left">${lt('eq10')}</th><th style="text-align:left">${lt('eqVend')}</th><th style="text-align:left">${lt('eqStat')}</th></tr></thead><tbody>`+
+   EQ.map(e=>`<tr><td class="tw"><b>${e.i[lang]}</b></td><td class="tw">${e.d}</td><td class="tw">${e.v}</td><td class="tw"><span class="pill ${e.p==='P0'?'bad':'warn'}">${e.p}</span> ${e.s[lang]}</td></tr>`).join('')+'</tbody>';
+  // modules
+  const mo=baseOpts(lt('hpCap'),lt('extraGas'));mo.plugins.tooltip.callbacks={label:x=>` ${fmt(x.raw,x.raw<10?2:0)} MWh`};mo.interaction={mode:'nearest',intersect:true};
+  setChart('c-mod',{type:'bar',data:{labels:['6 MW','8 MW','10 MW','12 MW'],datasets:[{data:[10303.08,2563.93,2.74,0],backgroundColor:[css('--bad'),css('--s4'),css('--s1'),css('--s1')],borderRadius:{topLeft:4,topRight:4},borderSkipped:'bottom',barPercentage:.6}]},options:mo});
+  // NPV
+  const cx=[];for(let k=20;k<=140;k+=5)cx.push(k);const npv=k=>126.29-1.2294*k;
+  const no=baseOpts(lt('capAx'),lt('npvAx'));no.scales.x.type='linear';no.scales.y.beginAtZero=false;no.elements={point:{radius:0}};
+  no.plugins.tooltip.callbacks={title:x=>`${x[0].parsed.x} k€`,label:x=>` NPV ${fmt(x.parsed.y,1)} k€`};
+  setChart('c-npv',{type:'line',data:{datasets:[{label:'NPV',data:cx.map(k=>({x:k,y:npv(k)})),borderColor:css('--accent'),borderWidth:2,fill:{target:{value:0},above:css('--good')+'30',below:css('--bad')+'30'}},
+    {type:'scatter',label:lang==='sk'?'Rozpočty z repa':'Repo budgets',data:[[45,70.97],[75,34.08],[110,-8.94]].map(([x,y])=>({x,y})),backgroundColor:css('--ink'),borderColor:css('--panel'),borderWidth:2,pointRadius:6}]},options:no});
+  renderCool();renderPilot();
+  // HX sizing
+  const xs=[];for(let t=31;t<=50;t+=.5)xs.push(t);
+  const area=(Ts,U)=>{const d1=Ts-29.5,d2=Ts-3-27.5;if(d1<=0||d2<=0)return null;const lm=Math.abs(d1-d2)<1e-9?d1:(d1-d2)/Math.log(d1/d2);return 150000/lm*1.25/U};
+  const ho=baseOpts(lt('hxSrcT'),lt('hxArea'));ho.scales.x.type='linear';ho.scales.y.type='logarithmic';ho.scales.y.min=4;ho.elements={point:{radius:0}};
+  ho.plugins.tooltip.callbacks={title:x=>`${x[0].parsed.x} °C`,label:x=>` ${x.dataset.label}: ${fmt(x.parsed.y,1)} m²`};
+  const uc=[css('--s2'),css('--s1'),css('--s3')];
+  setChart('c-hx',{type:'line',data:{datasets:[800,1500,2500].map((U,i)=>({label:`U = ${U} W/m²K`,data:xs.map(t=>({x:t,y:area(t,U)})).filter(p=>p.y),borderColor:uc[i],borderWidth:U===1500?3:2})).concat([{type:'scatter',label:lang==='sk'?'Návrh repa 35 °C':'Repo design 35 °C',data:[{x:35,y:25.08}],backgroundColor:css('--ink'),borderColor:css('--panel'),borderWidth:2,pointRadius:6}])},
+    options:Object.assign(ho,{plugins:Object.assign(ho.plugins,{legend:{display:true,position:'bottom',labels:{color:css('--ink-2'),boxWidth:12,boxHeight:3}}})})});
+  // FMEA
+  $('fm-table').innerHTML=`<thead><tr><th>${lt('fmId')}</th><th style="text-align:left">${lt('fmSys')}</th><th style="text-align:left">${lt('fmMode')}</th><th style="text-align:left">${lt('fmGuard')}</th><th style="text-align:left">${lt('fmSim')}</th><th>${lt('fmPri')}</th></tr></thead><tbody>`+
+   D.fmea.map(r=>`<tr><td>${r.ID}</td><td style="text-align:left">${r.subsystem}</td><td class="tw">${lang==='sk'?(FMSK[r.failure_mode]||r.failure_mode):r.failure_mode.replace(/_/g,' ')}</td><td class="tw">${r.safeguard_required}</td><td class="tw" style="font:12px var(--font-mono)">${r.simulation_status.replace(/_/g,' ').toLowerCase()}</td><td><span class="pill ${r.priority==='P0'?'bad':'warn'}">${r.priority}</span></td></tr>`).join('')+'</tbody>';
+}
+const CS={u:7,d:.1,s:30,b:10,p:false};
+function renderCool(){
+  $('o-cu').textContent=`${CS.u} × 2 MW`;$('o-cd').textContent=`${Math.round(CS.d*100)} %`;$('o-cs').textContent=`${CS.s} s`;$('o-cb').textContent=`${CS.b} m³`;
+  const r=coolSim({units:CS.u,derate:CS.d,dur:CS.s,bufferM3:CS.b,pumpFault:CS.p});
+  const mx=Math.max(...r.map(x=>x.T)),trips=r.filter(x=>x.trip).length,safe=trips===0;
+  $('cs-verdict').innerHTML=`<span class="pill ${safe?'good':'bad'}">${safe?'✓ '+lt('safe'):'✕ '+lt('trip')}</span><span>${lt('maxT')}: <b style="font-family:var(--font-mono)">${fmt(Math.min(mx,999),1)} °C</b>${safe?'':` · ${lt('tripFor')} ${fmt(trips*5/60,1)} ${lt('min')}`}</span><span style="color:var(--ink-3)">${lang==='sk'?'Normálny výkon':'Normal capacity'} ${fmt((CS.u-1)*2*(1-CS.d),1)} MW ${lang==='sk'?'voči':'vs'} 10 MW IT</span>`;
+  legend('lg-cs',[[lt('coolT'),css('--heat'),1],[lt('cap'),css('--s1'),1],[lt('tripL'),css('--bad'),1]]);
+  const o=baseOpts('min','°C');o.scales.y.beginAtZero=false;o.scales.y.min=34;o.scales.y.max=Math.max(46,Math.min(130,Math.ceil(mx+2)));o.elements={point:{radius:0}};
+  o.scales.y2={position:'right',min:0,max:16,grid:{display:false},border:{display:false},ticks:{color:css('--ink-3')},title:{display:true,text:'MW',color:css('--ink-3')}};
+  o.scales.x.ticks.callback=(v,i)=>i%120===0?i*5/60:'';o.scales.x.ticks.autoSkip=false;
+  o.plugins.tooltip.callbacks={title:x=>`t = ${fmt(x[0].dataIndex*5/60,2)} min`,label:x=>` ${x.dataset.label}: ${fmt(x.raw,2)}`};
+  setChart('c-cs',{type:'line',data:{labels:r.map(x=>x.t),datasets:[
+    {label:lt('coolT'),data:r.map(x=>x.T),borderColor:css('--heat'),borderWidth:2.5,yAxisID:'y'},
+    {label:lt('tripL'),data:r.map(()=>40),borderColor:css('--bad'),borderWidth:1.5,borderDash:[6,4],yAxisID:'y'},
+    {label:lt('cap'),data:r.map(x=>x.cap),borderColor:css('--s1'),borderWidth:1.5,stepped:true,yAxisID:'y2'}]},options:o});
+}
+// one-axis note: the cooler capacity is on its own right-hand MW scale and labelled; temperature is the primary read.
+const PS={k:250,dt:5,v:1.5,r:60};
+function renderPilot(){
+  $('o-pk').textContent=`${PS.k} kW`;$('o-pd').textContent=`${PS.dt} K`;$('o-pv').textContent=`${fmt(PS.v,1)} m/s`;$('o-pr').textContent=`${PS.r} s`;
+  const q=PS.k*1000,rc=997*4182;const flow=q/(rc*PS.dt)*3600;const id=Math.sqrt(4*flow/3600/(Math.PI*PS.v))*1000;
+  const buf=q*PS.r/(rc*5);const hpOut=q*.9*5/4,hpEl=hpOut/5,dh=hpOut/(rc*20)*3600;
+  const rows=[[flow,'m³/h',`Q / (ρ·c_p·ΔT)`],[id,'mm',`√(4·V̇ / π·v)`],[buf,'m³',`Q·t / (ρ·c_p·5 K)`],[hpOut/1000,'kW',`0.9·Q · COP/(COP−1)`],[hpEl/1000,'kW',`Q_out / COP`],[dh,'m³/h',`50/70 °C`],[null,'',lang==='sk'?`2 × ${PS.k} kW alebo 3 × ${Math.ceil(PS.k/2)} kW`:`2 × ${PS.k} kW or 3 × ${Math.ceil(PS.k/2)} kW`]];
+  $('ps-table').innerHTML=`<thead><tr><th>${lt('psItem')}</th><th>${lt('psVal')}</th><th style="text-align:left">${lt('psHow')}</th></tr></thead><tbody>`+
+   rows.map((r,i)=>`<tr><td>${lt('ps')[i]}</td><td style="font-family:var(--font-mono)">${r[0]==null?'':fmt(r[0],r[0]<10?1:0)+' '+r[1]}</td><td style="text-align:left;font:12px var(--font-mono);color:var(--ink-2)">${r[2]}</td></tr>`).join('')+'</tbody>';
+}
+[['cu','u',1],['cd','d',1],['cs','s',1],['cb','b',1]].forEach(([id,k])=>$(id).addEventListener('input',e=>{CS[k]=+e.target.value;renderCool()}));
+$('cp').addEventListener('change',e=>{CS.p=e.target.checked;renderCool()});
+[['pk','k'],['pd','dt'],['pv','v'],['pr','r']].forEach(([id,k])=>$(id).addEventListener('input',e=>{PS[k]=+e.target.value;renderPilot()}));
+/* ================= Simulator & switches (pool v04) ================= */
+__POOL__
+const SW=[['it','u',7],['hx','u',10],['tes','u',9],['pool','u',8],['dh','dh',2],['hpp','cfg','hp_pool_enabled']];
+const SWL={en:{it:"IT load (data centre)",hx:"Direct heat exchanger",tes:"Thermal storage",pool:"Pool",dh:"District network",hpp:"Heat pump → pool",on:"On",off:"Off",win:"Window",
+  kp:"Pool heat",kd:"District heat delivered",ku:"District unmet",ke:"HP electricity",kt:"Pool temperature",kmax:"max",week:"7 days",
+  sDir:"Direct exchanger → pool",sHpp:"Heat pump → pool",sHpd:"Heat pump → district",sDis:"Storage → district",sUn:"District unmet",sDem:"District demand",sSrc:"DC heat available",
+  pT:"Pool °C",mode:"Mode",day:"Day",
+  wires:{2:"T_pool",4:"thermostat",1:"u[11]",5.1:"Q_request",5.2:"Q_loss",5.3:"thermostat'",3:"E_TES",6:"mode",7:"y[25]",8:"T'",9:"E'"},
+  blocks:{1:"DC operating inputs",2:"Pool temperature (k−1)",3:"TES energy (k−1)",4:"Thermostat (k−1)",5:"Pool demand and losses",6:"Dispatcher (Stateflow)",7:"Heat allocator DC → TES → pool",8:"New temperature",9:"New TES energy",10:"Result log"}},
+ sk:{it:"Záťaž IT (dátové centrum)",hx:"Priamy výmenník",tes:"Zásobník tepla",pool:"Bazén",dh:"Tepelná sieť",hpp:"Tepelné čerpadlo → bazén",on:"Zap",off:"Vyp",win:"Okno",
+  kp:"Teplo do bazéna",kd:"Teplo dodané do siete",ku:"Nepokrytý dopyt siete",ke:"Elektrina TČ",kt:"Teplota bazéna",kmax:"max",week:"7 dní",
+  sDir:"Priamy výmenník → bazén",sHpp:"TČ → bazén",sHpd:"TČ → sieť",sDis:"Zásobník → sieť",sUn:"Nepokrytý dopyt siete",sDem:"Dopyt siete",sSrc:"Dostupné teplo DC",
+  pT:"Bazén °C",mode:"Režim",day:"Deň",
+  wires:{2:"T_bazen",4:"termostat",1:"u[11]",5.1:"Q_ziad",5.2:"Q_straty",5.3:"termostat'",3:"E_TES",6:"rezim",7:"y[25]",8:"T'",9:"E'"},
+  blocks:{1:"Prevadzkove_vstupy_DC",2:"Teplota_bazena_pred_krokom",3:"Energia_TES_pred_krokom",4:"Termostat_pred_krokom",5:"Dopyt_bazena_a_straty",6:"Dispecer_Stateflow",7:"Rozdelovac_energie_DC_TES_Bazen",8:"Nova_teplota",9:"Nova_energia_TES",10:"Vysledny_tok_v04"}}};
+const sl=k=>SWL[lang][k];
+const SM={state:{it:'on',hx:'on',tes:'on',pool:'on',dh:'on',hpp:'on'},w0:72,w1:96,scn:'zaklad',so:0,sh:200,sp:150,sv:500,t:300,res:null};
+function simRun(){const c={source_temperature_offset_C:SM.so,hp_thermal_limit_kw:SM.sh,hp_electric_limit_kw:55*SM.sh/200,pool_limit_kw:SM.sp,volume_m3:SM.sv,hp_pool_enabled:SM.state.hpp!=='off'};
+  const steps=672,base=poolInputs(SM.scn,steps,D.forcing);
+  const sched=base.map((u,k)=>{const h=k/4;const inW=h>=SM.w0&&h<SM.w1;
+    for(const [id,kind,idx] of SW){const st=SM.state[id];const off=st==='off'||(st==='win'&&inW);if(!off||kind==='cfg')continue;if(kind==='u')u[idx]=0;else u[2]=0}return u});
+  SM.res=runPool('__custom',c,sched,steps)}
+function renderSwitches(){
+  $('switches').innerHTML=SW.map(([id])=>`<div class="sw"><span>${sl(id)}</span><span class="tg" role="group" aria-label="${sl(id)}">${['on','win','off'].map(s=>`<button class="${s}" data-sw="${id}" data-st="${s}" aria-pressed="${SM.state[id]===s}" ${id==='hpp'&&s==='win'?'disabled':''}>${sl(s)}</button>`).join('')}</span></div>`).join('');
+  $('switches').querySelectorAll('button').forEach(b=>b.onclick=()=>{SM.state[b.dataset.sw]=b.dataset.st;simRun();renderSim()});
+  $('sm-case').innerHTML=Object.keys(D.pool).map(s=>`<option value="${s}"${s===SM.scn?' selected':''}>${L[lang].pool[s]}</option>`).join('');
+}
+function renderSim(){
+  if(!SM.res)simRun();renderSwitches();const R=SM.res.rows,m=SM.res.m;
+  $('o-fw').textContent=`${SM.w0}–${SM.w1} h`;$('o-so').textContent=`${SM.so>0?'+':''}${SM.so} K`;$('o-sh').textContent=`${SM.sh} kW`;$('o-sp').textContent=`${SM.sp} kW`;$('o-sv').textContent=`${SM.sv} m³`;
+  const Tmax=Math.max(...R.map(r=>r.nT));
+  const K=[[sl('kp'),fmt(m.pool_heat_MWh,1),'MWh'],[sl('kd'),fmt(m.dh_heat_MWh,1),'MWh'],[sl('ku'),fmt(m.dh_unmet_MWh,1),'MWh',m.dh_unmet_MWh>3?'bad':m.dh_unmet_MWh>1?'warn':'good'],[sl('kt'),fmt(m.final_temperature_C,2),'°C',Tmax>28?'bad':'good',`${sl('kmax')} ${fmt(Tmax,2)} °C`]];
+  $('sm-kpis').innerHTML=K.map(k=>`<div class="kpi"><span class="k">${k[0]}</span><span class="v">${k[1]}<small>${k[2]}</small></span><span class="d">${k[3]?`<span class="pill ${k[3]}">${k[3]==='good'?'OK':'!'}</span> `:''}${k[4]||sl('week')}</span></div>`).join('');
+  const lab=R.map((_,i)=>i),kw=a=>a.map(v=>v/1000);const s1=css('--s1'),s2=css('--s2'),s3=css('--s3'),s4=css('--s4');
+  legend('lg-sm',[[sl('sDir'),s3],[sl('sHpp'),s4],[sl('sHpd'),s1],[sl('sDis'),s2],[sl('sDem'),css('--ink'),1],[sl('sSrc'),css('--gas'),1]]);
+  const o=baseOpts('','kW');o.elements={point:{radius:0},line:{tension:0}};o.scales.y.stacked=true;o.scales.x.ticks.autoSkip=false;o.scales.x.ticks.callback=(v,i)=>i%96===0?`${sl('day')} ${i/96+1}`:'';
+  o.plugins.tooltip.callbacks={title:x=>`${sl('day')} ${Math.floor(x[0].dataIndex/96)+1}, ${String(Math.floor(x[0].dataIndex%96/4)).padStart(2,'0')}:${String(x[0].dataIndex%4*15).padStart(2,'0')}`,label:x=>` ${x.dataset.label}: ${fmt(x.raw,1)} kW`};
+  const cursor={id:'cur',afterDraw(ch){const {ctx,chartArea:a,scales:{x}}=ch;const px=x.getPixelForValue(SM.t);ctx.save();ctx.strokeStyle=css('--heat');ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(px,a.top);ctx.lineTo(px,a.bottom);ctx.stroke();ctx.restore()}};
+  const ar=(l_,d,col)=>({label:l_,data:kw(d),borderColor:col,backgroundColor:col+'cc',borderWidth:0,fill:true,stack:'s'});
+  const win={id:'win',beforeDraw(ch){if(!Object.values(SM.state).includes('win'))return;const {ctx,chartArea:a,scales:{x}}=ch;ctx.save();ctx.fillStyle=css('--warn')+'22';ctx.fillRect(x.getPixelForValue(SM.w0*4),a.top,x.getPixelForValue(Math.min(671,SM.w1*4))-x.getPixelForValue(SM.w0*4),a.bottom-a.top);ctx.restore()}};
+  setChart('c-sm',{type:'line',plugins:[cursor,win],data:{labels:lab,datasets:[ar(sl('sDir'),R.map(r=>r.direct),s3),ar(sl('sHpp'),R.map(r=>r.hpp),s4),ar(sl('sHpd'),R.map(r=>r.hpd),s1),ar(sl('sDis'),R.map(r=>r.dis),s2),
+    {label:sl('sDem'),data:kw(R.map(r=>r.u[2])),borderColor:css('--ink'),borderWidth:1.5,fill:false,stack:'d'},{label:sl('sSrc'),data:kw(R.map(r=>r.dc)),borderColor:css('--gas'),borderWidth:1.5,borderDash:[5,4],fill:false,stack:'e'}]},options:o});
+  legend('lg-sm2',[[sl('pT'),css('--heat'),1],['28 °C',css('--bad'),1]]);
+  const o2=baseOpts('','°C');o2.scales.y.beginAtZero=false;o2.elements={point:{radius:0}};o2.scales.x.ticks=o.scales.x.ticks;o2.plugins.tooltip.callbacks={title:o.plugins.tooltip.callbacks.title,label:x=>` ${x.dataset.label}: ${fmt(x.raw,2)}`};
+  setChart('c-sm2',{type:'line',plugins:[cursor,win],data:{labels:lab,datasets:[{label:sl('pT'),data:R.map(r=>r.nT),borderColor:css('--heat'),borderWidth:2},{label:'28 °C',data:R.map(()=>28),borderColor:css('--bad'),borderDash:[6,4],borderWidth:1.2}]},options:o2});
+  drawDiagrams();
+}
+const BL={1:[40,242,220,288,0,1,'FromWorkspace'],2:[55,35,120,65,1,1,'UnitDelay'],3:[55,85,120,115,1,1,'UnitDelay'],4:[55,145,120,175,1,1,'UnitDelay'],5:[280,46,455,194,3,3,'Subsystem'],6:[525,47,750,228,4,1,'Chart'],7:[825,82,1050,283,6,1,'Subsystem'],8:[1100,35,1160,65,1,1,'Selector'],9:[1100,105,1160,135,1,1,'Selector'],10:[1120,215,1300,255,1,0,'ToWorkspace']};
+const LN=[[2,1,[[5,1],[6,3],[7,1]]],[4,1,[[5,2]]],[1,1,[[5,3],[6,2],[7,6]]],[5,3,[[4,1]]],[5,1,[[6,1],[7,3]]],[3,1,[[6,4],[7,2]]],[5,2,[[7,4]]],[6,1,[[7,5]]],[7,1,[[8,1],[9,1],[10,1]]],[8,1,[[2,1]]],[9,1,[[3,1]]]];
+const port=(b,io,i)=>{const [x1,y1,x2,y2,ni,no]=BL[b];const n=io==='in'?ni:no;return [io==='in'?x1:x2,y1+(y2-y1)*(i-.5)/n]};
+function drawDiagrams(){
+  const R=SM.res.rows,k=SM.t,r=R[k];const W=SWL[lang].wires,B=SWL[lang].blocks;
+  $('o-st').textContent=`${sl('day')} ${Math.floor(k/96)+1}, ${String(Math.floor(k%96/4)).padStart(2,'0')}:${String(k%4*15).padStart(2,'0')} · k=${k}`;
+  const val={2:fmt(r.T,2)+' °C',1:`Q_dc ${fmt(r.u[0]/1000,0)} kW · T_dc ${fmt(r.u[1],1)} °C`,5.1:fmt(r.req/1000,1)+' kW',5.2:fmt(r.losses/1000,1)+' kW',3:fmt(r.E/3.6e9,3)+' MWh',6:String(r.mode),7:`Q_pool ${fmt(r.pool/1000,0)} · Q_DH ${fmt(r.dh/1000,0)} kW`,8:fmt(r.nT,2)+' °C',9:fmt(r.nE/3.6e9,3)+' MWh'};
+  let g=`<defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1L10,5L0,9z" fill="${css('--ink-3')}"/></marker></defs>`;
+  let fb=0;
+  for(const [sb,sp,dests] of LN){const [sx,sy]=port(sb,'out',sp);const key=sb===5?5+sp/10:sb;
+    dests.forEach(([db,dp],j)=>{const [dx,dy]=port(db,'in',dp);let d;
+      if(dx>sx){const mx=Math.min(dx-14,sx+20+j*6);d=`M${sx},${sy} H${mx} V${dy} H${dx-2}`}
+      else if(sb===5){d=`M${sx},${sy} H${sx+12} V18 H${dx-22} V${dy} H${dx-2}`}
+      else{const by=320+fb*16;fb++;d=`M${sx},${sy} H${sx+16+fb*4} V${by} H${dx-18-fb*4} V${dy} H${dx-2}`}
+      g+=`<path class="wire" d="${d}" marker-end="url(#ar3)"/>`});
+    g+=`<text class="wn" x="${sx+6}" y="${sy-5}">${W[key]||''}</text>`;
+    if(val[key])g+=`<text class="wv" x="${sx+6}" y="${sy+14}">${val[key]}</text>`}
+  const dis={1:SM.state.it!=='on',7:['hx','tes','dh','hpp'].some(x=>SM.state[x]!=='on'),5:SM.state.pool!=='on'};
+  for(const b in BL){const [x1,y1,x2,y2,,,ty]=BL[b];const sub=['Subsystem','Chart'].includes(ty);
+    g+=`<g class="blk${sub?' sub':''}${dis[b]?' dis':''}"><rect x="${x1}" y="${y1}" width="${x2-x1}" height="${y2-y1}" rx="${sub?6:3}"/>`+
+      (x2-x1>100?`<text x="${x1+8}" y="${y1+18}" style="font-weight:600">${B[b]}</text><text class="ty" x="${x1+8}" y="${y2-8}">${ty}</text>`:`<text class="ty" x="${(x1+x2)/2}" y="${(y1+y2)/2+4}" text-anchor="middle">${ty==='UnitDelay'?'1/z':'[i]'}</text>`)+'</g>'}
+  $('slx').innerHTML=g;
+  const ST=[[0,60,157,'BEZ_ZDROJA'],[1,350,157,'PRIAMY_VYMENNIK'],[2,640,157,'TEPELNE_CERPADLO'],[3,60,317,'CERPAJ_Z_TES'],[4,350,317,'IT_BEZPECNE_ODSTAVENIE']];
+  const tc={};const occ=[0,0,0,0,0];for(let i=0;i<R.length;i++){occ[R[i].mode]++;if(i&&R[i].mode!==R[i-1].mode){const kk=R[i-1].mode+'>'+R[i].mode;tc[kk]=(tc[kk]||0)+1}}
+  const ctr=s=>[ST[s][1]+125,ST[s][2]+45];
+  let h=`<defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1L10,5L0,9z" fill="${css('--accent')}"/></marker></defs>`;
+  h+=`<text class="wn" x="20" y="140">Dispecer_Stateflow · ${lang==='sk'?'každý krok':'every step'}: [volba_rezimu_v04_sk(ziad,u,T,E)==k]</text>`;
+  h+=`<circle cx="36" cy="166" r="4" fill="${css('--accent')}"/><path d="M36,170 V200 H56" class="sft" stroke-width="1.5" marker-end="url(#ar4)"/>`;
+  const clip=(x,y,tx,ty)=>{const dx=tx-x,dy=ty-y;const s=Math.min(Math.abs(125/(dx||1e-9)),Math.abs(45/(dy||1e-9)));return [x+dx*s,y+dy*s]};
+  for(const kk in tc){const [a,b]=kk.split('>').map(Number);const [x1,y1]=ctr(a),[x2,y2]=ctr(b);const mx=(x1+x2)/2+(y2-y1)*.18,my=(y1+y2)/2-(x2-x1)*.18;
+    const [sx,sy]=clip(x1,y1,mx,my),[ex,ey]=clip(x2,y2,mx,my);
+    h+=`<path class="sft" d="M${sx},${sy} Q${mx},${my} ${ex},${ey}" stroke-width="${Math.min(5,1.2+Math.log2(tc[kk]))}" marker-end="url(#ar4)"/><text class="sfl" x="${mx}" y="${my-4}" text-anchor="middle">${tc[kk]}×</text>`}
+  h+=ST.map(([s,x,y,n])=>`<g class="sfs${r.mode===s?' act':''}"><rect x="${x}" y="${y}" width="250" height="90" rx="14"/><text class="nm" x="${x+12}" y="${y+22}">${n}</text><text x="${x+12}" y="${y+42}">en,du: rezim=${s};</text><text x="${x+12}" y="${y+78}" style="fill:var(--ink-3)">${fmt(occ[s]/4,1)} h · ${lt('mode')[s]}</text></g>`).join('');
+  h+=`<g class="sfs"><rect x="40" y="470" width="420" height="60" rx="4"/><text x="52" y="494" class="nm">function</text><text x="52" y="516">m=volba_rezimu_v04_sk(req,inputs,T,E)</text></g>`;
+  h+=`<g class="sfs"><rect x="630" y="290" width="300" height="240" rx="4" style="fill:var(--panel)"/><text x="642" y="314" class="nm">${lang==='sk'?'Pravidlá výberu režimu':'Mode rules'} · k=${k}</text>`+
+    [[`IT_ok = ${r.u[7]}`,'0 → 4'],[`Q_dc = ${fmt(r.u[0]/1000,0)} kW`,'0 → 3 / 0'],[`HX_ok · pool_ok = ${r.u[10]*r.u[8]}`,''],[`Q_req = ${fmt(r.req/1000,1)} kW`,'> 0'],[`T_dc ${fmt(r.u[1],1)} > T+5 = ${fmt(r.T+5,1)}`,'→ 1'],[lang==='sk'?'inak':'otherwise','→ 2'],[`${lang==='sk'?'zvolené':'chosen'}: rezim = ${r.mode}`,'']].map((q,i)=>`<text x="642" y="${342+i*25}"${i===6?' class="nm"':''}>${q[0]}</text><text x="918" y="${342+i*25}" text-anchor="end" style="fill:var(--accent)">${q[1]}</text>`).join('')+'</g>';
+  $('sf').innerHTML=h;
+}
+let playT=null;
+const redrawCursor=()=>{drawDiagrams();charts['c-sm']?.draw();charts['c-sm2']?.draw()};
+$('sm-t').addEventListener('input',e=>{SM.t=+e.target.value;redrawCursor()});
+$('sm-play').onclick=()=>{if(playT){clearInterval(playT);playT=null;$('sm-play').textContent='▶';return}$('sm-play').textContent='❚❚';
+  playT=setInterval(()=>{SM.t=(SM.t+2)%672;$('sm-t').value=SM.t;redrawCursor()},80)};
+[['so','so'],['sh','sh'],['sp','sp'],['sv','sv']].forEach(([id,k])=>$(id).addEventListener('input',e=>{SM[k]=+e.target.value;simRun();renderSim()}));
+$('fw0').addEventListener('input',e=>{SM.w0=Math.min(+e.target.value,SM.w1);simRun();renderSim()});
+$('fw1').addEventListener('input',e=>{SM.w1=Math.max(+e.target.value,SM.w0);simRun();renderSim()});
+$('sm-case').addEventListener('change',e=>{SM.scn=e.target.value;simRun();renderSim()});
+$('sm-reset').onclick=()=>{Object.assign(SM,{state:{it:'on',hx:'on',tes:'on',pool:'on',dh:'on',hpp:'on'},w0:72,w1:96,scn:'zaklad',so:0,sh:200,sp:150,sv:500});['so','sh','sp','sv'].forEach(k=>$(k).value=SM[k]);$('fw0').value=72;$('fw1').value=96;simRun();renderSim()};
+const _render=render;render=function(){if(view==='model'||!cur)_render();else{cur=run(S.scenario)}renderView()};
+setRanges();syncInputs();applyLang();_render();route();
+</script>
