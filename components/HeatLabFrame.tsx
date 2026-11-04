@@ -32,6 +32,8 @@ export function HeatLabFrame({ locale, loading, standalone }: { locale: Locale; 
     };
     window.addEventListener('message', onMessage);
     window.addEventListener('heat-lab:view', onView);
+    // The lab may have loaded before this listener existed; ask it for its height.
+    ref.current?.contentWindow?.postMessage({ type: 'heat-lab-ping' }, '*');
     return () => { window.removeEventListener('message', onMessage); window.removeEventListener('heat-lab:view', onView); };
   }, []);
 
@@ -43,6 +45,7 @@ export function HeatLabFrame({ locale, loading, standalone }: { locale: Locale; 
         title="HeatCloud heat model lab"
         style={{ height }}
         loading="lazy"
+        onLoad={() => ref.current?.contentWindow?.postMessage({ type: 'heat-lab-ping' }, '*')}
       />
       <noscript><p className="il-fine">{loading}</p></noscript>
       <p className="il-fine hm-frame-foot"><a href={`${src.replace('embed=1&', '')}#${view}`} target="_blank" rel="noopener">{standalone} ↗</a></p>

@@ -566,7 +566,8 @@ const Q=new URLSearchParams(location.search);
 if(Q.get('lang')==='sk'||Q.get('lang')==='en')lang=Q.get('lang');
 if(Q.get('embed')){document.documentElement.classList.add('embed');
   const post=()=>{try{parent.postMessage({type:'heat-lab-height',height:document.documentElement.scrollHeight,view:location.hash.slice(1)||'model'},'*')}catch(e){}};
-  new ResizeObserver(post).observe(document.body);addEventListener('hashchange',post);addEventListener('load',post);}
+  new ResizeObserver(post).observe(document.body);addEventListener('hashchange',post);addEventListener('load',post);
+  addEventListener('message',e=>{if(e.source===parent&&e.data&&e.data.type==='heat-lab-ping')post()});}
 
 const $=id=>document.getElementById(id);
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
