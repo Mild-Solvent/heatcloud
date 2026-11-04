@@ -59,12 +59,14 @@ export default function Header({
       active ? 'after:opacity-100' : 'after:opacity-0'
     }`;
 
-  if (path === '/') {
+  if (path === '/' || path.startsWith('/heat-model')) {
     const sk = locale === 'sk';
+    const home = path === '/' ? '' : '/';
     const links = [
-      ['#thesis', sk ? 'Projekt' : 'The project'],
-      ['#system', sk ? 'Technológia' : 'Technology'],
-      ['#economics', sk ? 'Ekonomika' : 'Economics'],
+      [`${home}#thesis`, sk ? 'Projekt' : 'The project'],
+      [`${home}#system`, sk ? 'Technológia' : 'Technology'],
+      ['/heat-model/', sk ? 'Tepelný model' : 'Heat model'],
+      [`${home}#economics`, sk ? 'Ekonomika' : 'Economics'],
       ['/investors/', sk ? 'Pre investorov' : 'For investors'],
     ];
     return (

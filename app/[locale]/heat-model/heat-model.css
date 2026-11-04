@@ -1,0 +1,30 @@
+/* /heat-model/ deep dive. Builds on components/investor-landing.css. */
+.hm-hero { padding-top: 72px; }
+.hm-title { font-size: clamp(44px, 5.2vw, 76px) !important; white-space: pre-line; text-wrap: balance; }
+.hm-hero-intro { display: grid; gap: 28px; justify-self: end; max-width: 460px; }
+.hm-hero .il-stats { margin-top: 64px; border-top: 1px solid var(--il-line); }
+.hm-hero .il-stats strong { font-size: 44px; font-weight: 400; letter-spacing: -.04em; }
+.hm-inside { padding-block: 96px 40px; }
+.hm-views { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 52px; }
+.hm-views > * { display: flex; }
+.hm-view { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: flex; flex-direction: column; align-items: start; padding: 22px 22px 18px; border: 1px solid var(--il-line); border-top: 2px solid #bdc6bc; background: #fff; border-radius: 3px; transition: border-color .2s, transform .2s; }
+.hm-view:hover, .hm-view:focus-visible { border-top-color: var(--il-orange); transform: translateY(-2px); }
+.hm-view:focus-visible { outline: 2px solid var(--il-orange); outline-offset: 3px; }
+.hm-view .il-index { margin-bottom: 18px; }
+.hm-view b { font-weight: 400; font-size: 21px; letter-spacing: -.02em; line-height: 1.25; }
+.hm-view-body { color: var(--il-muted); font-size: 13.5px; line-height: 1.7; margin-top: 12px; flex: 1; }
+.hm-view-go { margin-top: 18px; color: var(--il-orange); font-size: 15px; }
+.hm-lab { padding-block: 40px 20px; scroll-margin-top: 84px; }
+.hm-lab-inner { width: min(100% - 48px, 1440px); margin-inline: auto; }
+.hm-frame iframe { display: block; width: 100%; border: 1px solid var(--il-line); border-radius: 4px; background: #f8f8f4; }
+.hm-frame-foot { margin-top: 10px; text-align: right; }
+.hm-findings { grid-template-columns: repeat(5, 1fr); gap: 30px; }
+.hm-findings h3 { font-size: 19px; }
+.hm-findings .il-pillar > p { font-size: 13.5px; }
+.hm-limits { display: grid; grid-template-columns: 1fr 1.2fr; gap: 80px; border-top: 1px solid var(--il-line); }
+.hm-limits ul { list-style: none; padding: 0; margin: 0 0 28px; }
+.hm-limits li { border-top: 1px solid var(--il-line); padding: 16px 0; color: var(--il-muted); font-size: 14.5px; line-height: 1.7; }
+.hm-limits li:last-child { border-bottom: 1px solid var(--il-line); }
+@media (max-width: 1100px) { .hm-views { grid-template-columns: 1fr 1fr; } .hm-findings { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px) { .hm-hero-intro { justify-self: start; } .hm-limits { grid-template-columns: 1fr; gap: 28px; } .hm-lab-inner { width: calc(100% - 24px); } }
+@media (max-width: 600px) { .hm-hero { padding-top: 40px; } .hm-hero .il-stats strong { font-size: 33px; } .hm-views, .hm-findings { grid-template-columns: 1fr; } .hm-inside { padding-block: 62px 24px; } .hm-lab-inner { width: 100%; } .hm-frame iframe { border-inline: 0; border-radius: 0; } .hm-frame-foot { padding-inline: 16px; } }

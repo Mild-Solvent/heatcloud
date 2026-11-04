@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "heat-lab": "node tools/heat-lab/build.mjs && node tools/heat-lab/verify.mjs"
   },
   "dependencies": {
     "next": "16.3.4",
