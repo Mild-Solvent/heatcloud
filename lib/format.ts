@@ -30,3 +30,11 @@ export const num = (locale: Locale, n: number, dp = 0) =>
   new Intl.NumberFormat(localeTag[locale], { minimumFractionDigits: dp, maximumFractionDigits: dp }).format(n);
 
 export const pct = (locale: Locale, n: number) => `${num(locale, n * 100)} %`.replace(' %', locale === 'sk' ? ' %' : '%');
+
+/** 812 B / 4.2 KB / 1.3 MB, in the page's number format. */
+export function formatBytes(n: number, locale: 'sk' | 'en') {
+  const f = (v: number, d: number) => v.toLocaleString(locale === 'sk' ? 'sk-SK' : 'en-IE', { maximumFractionDigits: d });
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${f(n / 1024, 1)} KB`;
+  return `${f(n / 1024 / 1024, 1)} MB`;
+}

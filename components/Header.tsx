@@ -59,13 +59,14 @@ export default function Header({
       active ? 'after:opacity-100' : 'after:opacity-0'
     }`;
 
-  if (path === '/' || path.startsWith('/heat-model')) {
+  if (path === '/' || path.startsWith('/heat-model') || path.startsWith('/floor-plan') || path.startsWith('/repo')) {
     const sk = locale === 'sk';
     const home = path === '/' ? '' : '/';
     const links = [
       [`${home}#thesis`, sk ? 'Projekt' : 'The project'],
       [`${home}#system`, sk ? 'Technológia' : 'Technology'],
       ['/heat-model/', sk ? 'Tepelný model' : 'Heat model'],
+      ['/floor-plan/', sk ? 'Pôdorys' : 'Floor plan'],
       [`${home}#economics`, sk ? 'Ekonomika' : 'Economics'],
       ['/investors/', sk ? 'Pre investorov' : 'For investors'],
     ];
@@ -83,7 +84,7 @@ export default function Header({
             <button type="button" className="il-menu-toggle" aria-label={t.menu} aria-expanded={mobile} aria-controls="landing-mobile-nav" onClick={() => setMobile(!mobile)}>{mobile ? '×' : '≡'}</button>
           </div>
         </div>
-        {mobile && <nav id="landing-mobile-nav" className="il-mobile-nav" aria-label={sk ? 'Mobilná navigácia' : 'Mobile navigation'}>{[...links, ['/contact/', t.contact], ['/products/', t.products]].map(([href, label]) => <Link key={href} href={href} onClick={() => setMobile(false)}>{label}</Link>)}</nav>}
+        {mobile && <nav id="landing-mobile-nav" className="il-mobile-nav" aria-label={sk ? 'Mobilná navigácia' : 'Mobile navigation'}>{[...links, ['/repo/', sk ? 'Prehľad repozitára' : 'Repository overview'], ['/contact/', t.contact], ['/products/', t.products]].map(([href, label]) => <Link key={href} href={href} onClick={() => setMobile(false)}>{label}</Link>)}</nav>}
       </header>
     );
   }

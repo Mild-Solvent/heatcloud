@@ -61,6 +61,8 @@ export const sk: Dict = {
       ['Podpora', '/support/'],
       ['Kontakt', '/contact/'],
       ['Pre investorov', '/investors/'],
+      ['Pôdorys pilotu', '/floor-plan/'],
+      ['Prehľad repozitára', '/repo/'],
     ],
     copyright: '© 2026 {name} — {status}.',
     prices: 'Ceny v EUR bez {vat} % DPH. Náhľad {version}, aktualizované {date}.',

@@ -63,6 +63,8 @@ export const en = {
       ['Support', '/support/'],
       ['Contact', '/contact/'],
       ['For investors', '/investors/'],
+      ['Pilot floor plan', '/floor-plan/'],
+      ['Repository overview', '/repo/'],
     ] as [string, string][],
     copyright: '© 2026 {name} — {status}.',
     prices: 'Prices in EUR excluding {vat}% Slovak VAT. Preview {version}, updated {date}.',
